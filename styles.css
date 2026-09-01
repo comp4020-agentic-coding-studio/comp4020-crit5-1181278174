@@ -88,3 +88,33 @@ footer {
   font-size: 0.6875rem;
   letter-spacing: 0.06em;
 }
+
+summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary::before {
+  content: "+\00a0";
+  color: var(--dim);
+}
+
+details[open] summary::before {
+  content: "\2212\00a0";
+}
+
+summary:hover,
+details[open] summary {
+  color: var(--ink);
+}
+
+details p {
+  margin: 0.5rem 0 0;
+  max-width: 62ch;
+  line-height: 1.7;
+  letter-spacing: 0;
+}

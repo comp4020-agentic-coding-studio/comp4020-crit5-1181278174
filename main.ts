@@ -41,6 +41,20 @@ canvas.addEventListener("pointerdown", (e) => {
   press(world);
 });
 
+// The nav used to be two in-page anchors on a page that fits in one screen:
+// they looked clickable and did nothing visible. Colophon now opens the thing
+// it names, in place -- letting the anchor jump scrolled the arena off the top,
+// which is worse than doing nothing.
+const colophon = document.querySelector<HTMLDetailsElement>("#colophon")!;
+document.querySelector<HTMLAnchorElement>('nav a[href="#colophon"]')!.addEventListener(
+  "click",
+  (e) => {
+    e.preventDefault();
+    colophon.open = !colophon.open;
+  },
+);
+if (location.hash === "#colophon") colophon.open = true;
+
 let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);

@@ -24,14 +24,29 @@
     <header>
       <h1>No Reverse</h1>
       <nav aria-label="Primary">
-        <a href="#arena">Arena</a>
         <a href="#colophon">Colophon</a>
+        <a
+          href="https://github.com/comp4020-agentic-coding-studio/comp4020-crit5-1181278174"
+          target="_blank"
+          rel="noopener"
+          >Source</a
+        >
       </nav>
     </header>
     <main>
       <canvas id="arena" width="640" height="480" aria-label="Arena"></canvas>
     </main>
-    <footer id="colophon">COMP4020 Agentic Coding Studio · Crit 5 · SONG XianShuo · 2026</footer>
+    <footer>
+      <details id="colophon">
+        <summary>COMP4020 Agentic Coding Studio · Crit 5 · SONG XianShuo · 2026</summary>
+        <p>
+          Vanilla TypeScript, Canvas 2D and Vite. No framework, no images, no audio: every pixel
+          on the canvas is drawn at run time, and the link-preview card is a screenshot of the
+          simulation running headlessly. Every arena after the first is generated from a seeded
+          RNG, so a run can be named by its number.
+        </p>
+      </details>
+    </footer>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
