@@ -1,16 +1,97 @@
-body {
-  margin: 0;
-  padding: 2rem;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+:root {
+  color-scheme: dark;
+  --ink: #c9ced8;
+  --dim: #6b7482;
+  --line: #1e2430;
+  --floor: #111318;
 }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #0b0c10;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+h1 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+h1 b {
+  color: var(--dim);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  font-size: 0.75rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
 }
 
 a {
-  color: #0b5fff;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--ink);
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+}
+
+canvas {
+  display: block;
+  width: min(100%, 1280px, calc((100dvh - 8rem) * 4 / 3));
+  aspect-ratio: 4 / 3;
+  height: auto;
+  background: var(--floor);
+  border: 1px solid #262d3a;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+canvas.aiming {
+  cursor: none;
+}
+
+footer {
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
 }
