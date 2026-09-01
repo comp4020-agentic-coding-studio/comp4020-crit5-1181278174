@@ -1,308 +1,403 @@
-# Crit 5 · 一台停不下来的坦克 —— 实施计划（PLAN.md）
+# Crit 5 · No Reverse — implementation plan (PLAN.md)
 
-> 这份是决策记录：director 记录决策、agent 提方案。只有课程网站发布的那份才叫 **spec**
-> （`crits/05-game`），冲突时以它为准；其次是 `CLAUDE.md`，再次是本文。
+> This is a decision record: the director rules, the agent proposes. Only the
+> plan published on the course site is the **spec** (`crits/05-game`), and it
+> wins any conflict; then `CLAUDE.md`; then this file.
 >
-> 开工时间 2026-09-02 03:32 AEST，cutoff 08:30，**剩 4.9 小时**。这份计划的每一节都按这个预算写。
+> Work started 2026-09-02 03:32 AEST, cutoff 08:30 — **4.9 hours**. Every
+> section below is written against that budget.
 
-## 决策记录（2026-09-02 02:50–03:30，设计对话，开工前）
+## Decision record (2026-09-02 02:50–03:30, design conversation, before any code)
 
-agent 提了三轮质疑，director 的裁决如下；与正文冲突处以本节为准。
+The agent pushed back three times; the director's rulings follow. Where the body
+of this plan disagrees with this section, this section wins.
 
-### 已裁决，不再讨论
+### Ruled on, not reopening
 
-**核心操作**
+**The core verb**
 
-1. **坦克以固定速度永远向前**，不能停、不能倒车。
-2. **光标决定朝向，但有最大角速度上限**，因此有转弯半径和惯性。
-3. **车身朝向即炮口朝向**，炮塔不能独立转。理由：独立炮塔需要第二个输入来控制移动方向，纯指针操作就破产了。
-4. **全程只有移动光标和点击两个输入。**
+1. **The tank moves forward at a fixed speed, always.** No stopping, no reverse.
+2. **The cursor sets the heading, but there is a maximum angular velocity** — so
+   there is a turning radius, and there is inertia.
+3. **Hull heading is gun heading.** No independent turret: a turret needs a
+   second input to steer with, and pure pointer control is then bankrupt.
+4. **Two inputs for the whole game: move the pointer, and click.**
 
-**世界与致死**
+**The world, and what kills you**
 
-5. **两种墙。砖墙一发打碎；钢墙不可破坏且反弹子弹**。最外圈必须是钢墙。
-   理由：一颗子弹不可能既炸开一堵墙又从它上面弹回来。
-6. **子弹打碎砖墙后消失**，不继续飞。（这让"砖吃掉子弹并开路 / 钢送回子弹"成为一对干净的二分，
-   也让"开炮逃生"这一手是可靠的。）
-7. **子弹能打死发射它的坦克。** 在钢墙走廊里开炮等于给自己发了一颗延迟命中的子弹。
-8. **撞墙即死。** —— 这条是后加的，它同时解决了"顶住墙 = 免费刹车"这个会让核心约束整个失效的漏洞：
-   沿墙滑行时切向分量为零，坦克会停住而旋转不受阻，贴墙就变成了安全区。墙致命之后不存在这个问题。
-   附带好处：撞墙死是 100% 可归因的死法，是这套规则里最好教的一条。
-9. **撞到敌人：双方都死**（玩家掉一条命，那个敌人也死）。
-10. **一击即死，敌人受完全相同的规则约束**（同样的速度、角速度上限、撞墙会死、自己的子弹会杀自己）。
+5. **Two kinds of wall. Brick breaks in one hit; steel is indestructible and
+   reflects bullets.** The outer ring must be steel. One bullet cannot both blow
+   a wall open and bounce off it.
+6. **A bullet that breaks brick is consumed** and does not fly on. This makes
+   "brick eats the bullet and opens a way / steel sends the bullet back" a clean
+   dichotomy, and makes shooting your way out a move you can rely on.
+7. **A bullet kills the tank that fired it.** Firing down a steel corridor is
+   posting yourself a delayed round.
+8. **Touching a wall kills you.** Added late, and it closes a hole that would
+   have voided the core constraint entirely: pressed against a wall the
+   tangential component is zero, so the tank stops while still free to rotate —
+   hugging a wall becomes a safe zone. Lethal walls have no such zone. Bonus: a
+   wall death is 100% attributable, which makes it the most teachable rule here.
+9. **Ramming an enemy kills both** — the player loses a life, that enemy dies.
+10. **One hit kills, and enemies are bound by exactly the same rules**: same
+    speed, same turn limit, walls kill them, their own bullets kill them.
 
-**场地**
+**The arena**
 
-11. **开阔场地 + 散落障碍，随机生成。不是迷宫。**
-    理由（几何）：转弯半径 r = v/ω，在走廊里掉头需要横向 2r + 车宽。任何窄于此的走廊都是单行道，
-    而撞墙即死把"单行道"变成了无解死局。Battle City 那种 1–2 格迷宫在这套规则下不成立。
-    参照系是 Atari《Combat》。
+11. **Open ground with scattered obstacles, procedurally generated. Not a maze.**
+    Geometry: turning radius r = v/ω, and turning around inside a corridor needs
+    2r + the hull across. Any corridor narrower than that is one-way, and lethal
+    walls turn one-way into unwinnable. Battle City's 1–2 tile maze does not hold
+    up under these rules. The reference is Atari *Combat*.
 
-**局与命**
+**Runs and lives**
 
-12. **玩家三条命。**
-13. **敌人一击即死，不复活。** 第 1 波 1 个，第 2 波 2 个同屏，第 3 波 3 个同屏。**三波通关算赢。**
-    （中途讨论过"敌人也三条命"，裁掉了：玩家的三条命不是一条规则，是给初次接触的人的学习脚手架；
-    规则的对称是脊椎，脚手架的对称不是对称，因为只有一边是人。）
-14. **每关难度增加**，靠敌人数量 + 敌人自保能力 + 生成器的钢砖比例三个旋钮。
-15. **死亡不重置本波进度** —— 已经打掉的敌人保持死亡。
-16. **开局坦克不动**，有一个"开始"。
-17. **重生：固定出生点。**
-18. **结局画面可以用文字。** spec 禁的是 instruction（教你怎么玩的文字），不是所有文字资源；
-    命名游戏、命数指示、波次数字、结算画面都不是 instruction。**红线只有一条：任何告诉玩家输入方式的东西都不行。**
+12. **Three lives.**
+13. **Enemies die in one hit and do not respawn.** Wave 1 has 1, wave 2 has 2 at
+    once, wave 3 has 3 at once. **Clearing three waves is the win.**
+    (We discussed giving enemies three lives too, and cut it: the player's three
+    lives are not a rule, they are learning scaffolding for someone meeting this
+    for the first time. Symmetry of rules is the spine; symmetry of scaffolding
+    is not symmetry, because only one side is a person.)
+14. **Each wave is harder**, on three dials: enemy count, enemy
+    self-preservation, and the generator's steel:brick ratio.
+15. **Dying does not reset wave progress** — enemies already killed stay dead.
+16. **The tank does not move at the start.** There is a start.
+17. **Respawn at a fixed spawn point.**
+18. **The ending screens may use words.** The spec forbids *instructions* — text
+    that teaches you how to play — not text as a resource. Naming the game, the
+    lives indicator, the wave count and the result screen are none of them
+    instructions. **There is one red line: nothing may tell the player what the
+    input is.**
 
-### 正文里 agent 提的、已被采纳的方案
+### Proposed by the agent in the body, adopted
 
-- **开局与重生复用同一个状态**：静止、车头跟着光标转、**点击出发**。
-  它让"固定出生点"和"安全重生"这两个本来冲突的要求兼容——安全不再需要生成器判定，由玩家自己挑时机；
-  而且它是零成本的（和开局同一个状态机），并且每次死都会把开局那一课重教一遍。
-- **点击既是开始也是第一发子弹**：把"玩家会不会发现能开火"这个风险变成开始的闸门。
-  关键性质不是"让它显眼"，而是**开始前的状态没有风险也没有计时器**，发现得慢不花任何代价。
-- **出生点正对空地，不是正对砖墙。** 第一发子弹飞过一片空地才教得清"点击 = 沿车头射出一个会飞的东西"；
-  一格外就打碎砖墙会把弹丸的飞行过程吞掉。
+- **Start and respawn are the same state**: stationary, hull tracking the
+  cursor, **click to go**. It makes "fixed spawn point" and "safe respawn"
+  compatible when they started out in conflict — safety is no longer a
+  generator predicate, the player picks their own moment. It costs nothing (same
+  state as the start) and it re-teaches the opening lesson on every death.
+- **The click that starts you is also your first shot**: the risk that the
+  player never discovers they can fire becomes the gate on starting. The
+  property that matters is not that it is conspicuous, but that **the state
+  before the start has no danger and no clock** — being slow to find it costs
+  nothing.
+- **The spawn faces open ground, not a brick wall.** The first bullet has to
+  cross open floor to teach "click = a thing flies out along the hull"; brick a
+  tile away swallows the flight.
 
-### 03:40 追加裁决（agent 提的三条，director 逐条回）
+### 03:40, three more rulings (agent asked, director answered each)
 
-- **栈：采纳。** vanilla TS + Vite + Canvas 2D，模板自带，零转换。
-- **单发子弹限制：否决。** director："可以有多发子弹，但是子弹不能永远在，这本来就是一个躲避弹幕的
-  游戏，就一发子弹还要躲啥。" —— 这是对的，agent 收回。**同屏多发，但每发有寿命上限。**
-  代价是"死因不可归因"这个问题回来了，改用两条更便宜的缓解：
-  **玩家子弹和敌人子弹在视觉上必须一眼可分**（颜色 + 形状，这不是 instruction），
-  以及每台坦克有开火冷却和在飞数量上限，防止点击连发把场地灌满。
-- **第 1 波固定布局：采纳。**
-- **触屏**：pointer 事件统一 mouse/touch/pen，但触屏上"移动光标"和"点击"是同一个动作。
-  沿用 C4 的 TAP 阈值做法（10 px / 250 ms 内抬起 = 开火，否则是转向拖拽），排在核心之后做。
-- **名字**：一往无前（占位，随时可换）。
+- **Stack: adopted.** Vanilla TS + Vite + Canvas 2D. It ships in the template,
+  zero conversion.
+- **One bullet at a time: vetoed.** Director: "可以有多发子弹，但是子弹不能永远
+  在，这本来就是一个躲避弹幕的游戏，就一发子弹还要躲啥" — several bullets are
+  fine, but a bullet must not live forever; this is a game about dodging fire,
+  and with one bullet on the field there is nothing to dodge. That is right, the
+  agent withdrew it. **Several in the air, each with a life limit.** The cost is
+  that "who killed me" gets muddy again, mitigated two cheaper ways instead:
+  **player bullets and enemy bullets must be distinguishable at a glance**
+  (colour and shape — not an instruction), and every tank has a fire cooldown
+  and a cap on bullets in flight so clicking fast cannot flood the arena.
+- **Fixed layout for wave 1: adopted.**
+- **Touch**: pointer events unify mouse/touch/pen, but on a touchscreen "move
+  the cursor" and "click" are the same gesture. Reuse crit 4's TAP threshold
+  (lift within 10 px / 250 ms = fire, otherwise it was a steering drag). After
+  the core.
+- **Name**: 一往无前 (placeholder, replaceable). *Shipped as* **No Reverse**.
 
-## 0. 目标
+## 0. The goal
 
-一台永远向前的坦克，一个开阔场地，三波敌人。玩家只有鼠标。**一个字的说明都没有。**
+A tank that only goes forward, an open arena, three waves of enemies. The player
+has a mouse and nothing else. **Not one word of explanation.**
 
-spec 的七条里，六条靠工程解决，一条只能靠设计：**it teaches itself**。§4 是这份计划的重心。
+Six of the spec's seven lines are engineering. One is only design: **it teaches
+itself**. §4 is where this plan puts its weight.
 
-## 1. 明确不做（防走偏）
+## 1. Explicitly not doing (drift guard)
 
-- 不做音效。这周 spec 不要，而且会吃掉时间。全部做完还有余量再说。
-- 不做菜单、设置、难度选择、存档、最高分。
-- 不做敌人寻路（A\*）。直线转向 + 避墙就够，理由见 §5。
-- 不做多种敌人类型、不做道具、不做粒子系统。
-- 不做移动端专属 UI（触屏控制见上，是同一套 pointer 处理，不是另一套界面）。
-- **不改 `vite.config.ts` 的 `base: "./"`。** Pages 路径靠它。
+- No audio. The spec does not ask for it this week and it would eat the budget.
+  Revisit only if everything else is done.
+- No menu, settings, difficulty select, save, high score.
+- No enemy pathfinding (A\*). Steer-at-target plus wall avoidance is enough; see §5.
+- No enemy types, no pickups, no particle system.
+- No mobile-only UI (touch control is the same pointer handling above, not a
+  second interface).
+- **Do not touch `base: "./"` in `vite.config.ts`.** The Pages path depends on it.
 
-## 2. 交互模型（规范）
+## 2. Interaction model (specification)
 
-### 2.1 转向
+### 2.1 Steering
 
-- 目标朝向 = 从车体指向光标的向量。
-- **死区**：光标落在以车体为心、半径 = 转弯半径 r 的圆内时，**目标朝向保持上一帧的值**。
-  这不是 hack：以 r 转弯的车，切于当前朝向、半径 r 的两个圆的内部是不可达的（Dubins 车），
-  光标落在那一圈里时它指的地方本来就到不了。表现是"光标贴着车 = 直行"。
-  没有死区的话，坦克开过光标那一刻目标角翻 180°，触发一次非自愿的满速掉头——撞墙即死之后这是公平性问题，不是手感问题。
-- **转向用 bang-bang**：永远以最大角速度朝目标角转，差值小于 ω·dt 时吸附。
-  比例控制会把"存在角速度上限"这条约束藏起来；bang-bang 让它时刻可见。
+- Target heading = the vector from the hull to the cursor.
+- **Dead zone**: while the cursor is inside the circle of radius r (the turning
+  radius) centred on the hull, **the target heading holds last frame's value**.
+  This is not a hack: for a car turning at radius r, the interiors of the two
+  circles of radius r tangent to the current heading are unreachable (Dubins
+  car), so a cursor in there is pointing somewhere the tank cannot get to. It
+  reads as "cursor near the tank = drive straight".
+  Without it, the frame the tank passes the cursor the target angle flips 180°
+  and triggers an involuntary full-rate turn — with lethal walls that is a
+  fairness problem, not a feel problem.
+- **Steering is bang-bang**: always turn at maximum angular velocity toward the
+  target angle, snapping when the difference drops under ω·dt. Proportional
+  control would hide the fact that an angular velocity limit exists at all;
+  bang-bang keeps it visible every second.
 
-### 2.2 状态机
+### 2.2 State machine
 
 ```
-READY ──点击(并开火)──> PLAYING ──撞墙/中弹/撞敌──> DEAD ──(命>0)──> READY
-                            │                          └──(命=0)──> LOST
-                            └──本波清空──> WAVE_CLEAR ──> READY(下一波) / WON(第3波后)
+READY ──click (and fire)──> PLAYING ──wall/bullet/ram──> DEAD ──(lives>0)──> READY
+                                │                          └──(lives=0)──> LOST
+                                └──wave cleared──> WAVE_CLEAR ──> READY (next) / WON (after 3)
 ```
 
-- `READY`：坦克静止在固定出生点，车头跟光标转，敌人**也静止**（整局冻结，玩家有一个不慌的瞬间读盘面）。
-- `WON` / `LOST`：明确的终局画面。spec 第 2 条要的是 "play ends somewhere"，
-  无缝重开的街机循环严格讲从不结束。允许有文字。
+- `READY`: the tank sits still at the fixed spawn, hull tracking the cursor, and
+  the enemies **are frozen too** — the whole run holds, so the player gets an
+  unhurried moment to read the board.
+- `WON` / `LOST`: a definite end screen. The spec's line 2 wants "play ends
+  somewhere", and an arcade loop that restarts seamlessly strictly never does.
+  Words allowed.
 
-### 2.3 子弹
+### 2.3 Bullets
 
-- 从炮口偏移处生成（否则出膛即自杀）。
-- 撞钢墙：镜面反射（按撞到的是横边还是竖边翻 vx / vy）。
-- 撞砖墙：砖消失，子弹消失。
-- 撞任何坦克（**包括发射者**）：双方判定死亡。
-- **寿命上限**：反弹 3 次或存活 4 秒后消失。开阔场地里永远弹下去的子弹是一个永久危险。
-- **同屏多发**，每台坦克有 0.35 s 开火冷却、在飞上限 3 发。
-- **玩家子弹与敌人子弹视觉上一眼可分。** 这是多发子弹的代价的缓解——死于子弹时要看得出是谁的。
+- Spawned at a muzzle offset (otherwise you shoot yourself leaving the barrel).
+- Steel: mirror reflection (flip vx or vy depending on which edge was hit).
+- Brick: the brick goes, the bullet goes.
+- Any tank, **including the one that fired it**: both are killed.
+- **Life limit**: gone after 3 bounces or 4 seconds. A bullet that ricochets
+  forever across open ground is a permanent hazard.
+- **Several in the air**, with a 0.35 s cooldown and a cap of 3 in flight per tank.
+- **Player bullets and enemy bullets must be distinguishable at a glance.** This
+  is the mitigation for allowing several: when a bullet kills you, you have to be
+  able to see whose it was.
 
-### 2.4 碰撞与死亡
+### 2.4 Collision and death
 
-- 坦克 vs 墙：**接触即死**，不做滑行解算。（这是整份计划里最省代码的一条裁决。）
-- 坦克 vs 坦克：双方死。
-- 判定用圆 vs 网格 AABB，不用旋转矩形——车身是圆的近似，接触判定宽容一点。
+- Tank vs wall: **contact kills**, no sliding resolution. (The cheapest ruling in
+  this whole plan.)
+- Tank vs tank: both die.
+- Circle vs grid AABB, not a rotated rectangle — the hull is approximated by a
+  circle, and contact should be forgiving.
 
-## 3. 地图生成器（规范）
+## 3. Map generator (specification)
 
-- 网格 40 × 30，格子 16 px，逻辑画布 640 × 480。整数倍缩放适配视口。
-- 最外圈全钢。
-- 内部**稀疏**撒障碍：单格或 2×2 的小块，钢:砖按波次调（见 §6）。目标覆盖率 8%–15%。
-- 出生点固定在场地下方中央，初始朝向正上方。
+- 40 × 30 grid, 16 px tiles, 640 × 480 logical canvas. Integer-scaled to the viewport.
+- The outer ring is all steel.
+- Obstacles scattered **sparsely** inside: single tiles or 2×2 blocks, steel:brick
+  by wave (see §6). Target coverage 8%–15%.
+- The spawn is fixed at bottom-centre, initially facing up.
 
-**不变量（这是 §7 那个测试要守的东西）**
+**Invariants (this is what the test in §7 guards)**
 
-1. 最外圈全部是钢墙。
-2. 出生点正前方 **≥ 8 格**无障碍（跑道：撞墙即死，重生后必须有反应时间）。
-3. 以出生点为心、半径 = **转弯直径**的圆盘内无障碍（能掉头）。
-4. **不存在被钢墙三面包围的空格**（钢制死角 = 开进去就必死，且开炮也出不来）。
-5. 敌人出生点与玩家出生点距离 ≥ 12 格。
+1. The outer ring is entirely steel.
+2. **≥ 8 tiles** of clear ground directly ahead of the spawn (the runway: walls
+   kill, so a respawn must come with reaction time).
+3. No obstacle inside the disc of **turning-diameter** radius around the spawn
+   (you can turn around).
+4. **No empty tile is enclosed by steel on three sides** (a steel dead end is a
+   place you die on entering, and cannot even shoot your way out of).
+5. Enemy spawns are ≥ 12 tiles from the player spawn.
 
-第 4 条就是那个"任何死角都必须是砖墙封口"的规则。注意它同时是**公平性保证**和 director 最初那个
-"被惯性逼进死角时开炮开一条逃生路"的幻想——让游戏公平的规则和产生那个时刻的规则是同一条。
+Invariant 4 is the "every dead end must be capped with brick" rule. Note that it
+is simultaneously a **fairness guarantee** and the director's original fantasy of
+being pushed into a corner by inertia and shooting an escape route: the rule that
+makes the game fair and the rule that produces that moment are the same rule.
 
-## 4. 无教程的教学时刻表 ★
+## 4. The tutorial-free teaching schedule ★
 
-spec 第 3 条。每一条规则都要有一个不用字的教会它的时刻，**而且会杀死玩家的规则必须先在别人身上教。**
+The spec's line 3. Every rule needs a moment that teaches it without words, **and
+every rule that can kill the player must be taught on someone else first.**
 
-| 规则 | 教学时刻 | 风险 |
+| Rule | Teaching moment | Cost |
 |---|---|---|
-| 光标转向 | `READY` 态车头跟着光标转 | 零——静止、无计时器 |
-| **点击 = 开火** | **点击是离开 `READY` 的唯一出口**，且那一击就是第一发子弹，飞过空地 | 零 |
-| 不能停 | 出发后 2 秒自明 | 零 |
-| 角速度上限 | 猛甩光标看它画弧，3 秒 | 零 |
-| 撞墙即死 | 第一次撞墙。100% 可归因，代价一条命，重生回 `READY` 把开局那课重教一遍 | 一条命 |
-| 砖墙一发碎 | 第 1 波场地里有砖块，打中就碎 | 零 |
-| 一击杀敌 | 打死第 1 波那个敌人 | 零 |
-| **钢墙不碎 + 子弹反弹 + 自己的子弹会杀自己** | **靠敌人演示**：第 1 波的敌人自保能力设为 0，它会在近距离朝钢墙开火并被弹回的子弹炸掉 | 零——在别人身上教 |
-| 撞敌人同归于尽 | 不安排，大概率意外发生 | 一条命 |
-| 清完进下一波 | 波次切换的画面变化 | 零 |
+| Cursor steers | In `READY`, the hull tracks the cursor | none — still, no clock |
+| **Click = fire** | **Clicking is the only way out of `READY`**, and that click is the first bullet, crossing open floor | none |
+| Cannot stop | Self-evident 2 seconds after launch | none |
+| Angular velocity limit | Throw the cursor around and watch it arc; 3 seconds | none |
+| Walls kill | The first wall. 100% attributable, costs one life, and the respawn drops you back into `READY` to re-teach the opening | one life |
+| Brick breaks in one hit | There is brick in the wave 1 arena; hit it and it goes | none |
+| One hit kills an enemy | Killing the wave 1 enemy | none |
+| **Steel does not break + bullets reflect + your own bullet kills you** | **Demonstrated by the enemy**: wave 1's enemy has self-preservation 0, so it fires at steel from close range and is killed by its own returning bullet | none — taught on someone else |
+| Ramming kills both | Not staged; it happens by accident soon enough | one life |
+| Clearing advances the wave | The screen changes at the wave boundary | none |
 
-最后那条是这个设计白送的：**因为敌人受完全相同的规则约束，敌人会被自己的跳弹打死。**
-一个字不用，同时教会三条最危险的规则。这是第 1 波要固定布局的唯一理由——随机生成保证不了它发生在视线里。
+That last one is a gift from the design: **because enemies are bound by exactly
+the same rules, an enemy will be killed by its own ricochet.** Three of the most
+dangerous rules, taught at once, with no words. It is the only reason wave 1
+needs a fixed layout — procedural generation cannot guarantee it happens on screen.
 
-**光标是准星形状，不是箭头。** 在无教程游戏里这不是美术选择。
-（后记：玩过之后改成了插在目标点的小红旗。「不是箭头」这条成立，「准星」错了——准星说的是「打这里」，可坦克要绕一个 30 px 半径的弯才到得了，那是个**地点**不是个**射击点**。见 `079c4ef`。）
+**The cursor is a reticle shape, not an arrow.** In a game with no tutorial that
+is not an art decision.
+(Later: playing it turned this into a small red flag planted at the target point.
+"Not an arrow" holds; "reticle" was wrong — a reticle says *shoot here*, but the
+tank has to swing a 30 px radius to arrive, so it is a **place**, not a firing
+point. See `7be15f2`.)
 
-## 5. 敌人（规范）
+## 5. Enemies (specification)
 
-一个很笨的控制器就够，因为**约束替你做了 AI**：大家都停不下来，敌人大部分时间炮口没对着你，
-这自动产生了"接近—威胁—擦身—重新接近"的节奏。
+A very dumb controller is enough, because **the constraints do the AI for you**:
+nobody can stop, so an enemy's gun is off you most of the time, and that alone
+produces an approach–threaten–pass–re-approach rhythm.
 
-- 转向：朝玩家转（和玩家用同一个 bang-bang 函数）。
-- 避墙：前方 N 格内有墙就把目标角偏开。N 随自保能力变。
-- 开火：大致对准玩家、且前方一段距离内没有钢墙时开火。
-- **自保能力 `care` ∈ [0,1]** 是难度旋钮，也是教程：
-  - `care = 0`（第 1 波）：不检查前方钢墙就开火 → 会把自己炸死。避墙距离也短，偶尔撞墙。
-  - `care = 0.5`（第 2 波）：检查钢墙，避墙正常。
-  - `care = 1`（第 3 波）：检查钢墙 + 预判玩家位置 + 不往角落里钻。
+- Steering: turn toward the player (the same bang-bang function the player uses).
+- Wall avoidance: if there is wall within N tiles ahead, bend the target angle
+  away. N scales with self-preservation.
+- Firing: fire when roughly lined up on the player and there is no steel within
+  some distance ahead.
+- **Self-preservation `care` ∈ [0,1]** is the difficulty dial, and also the tutorial:
+  - `care = 0` (wave 1): fires without checking for steel ahead → kills itself.
+    Short avoidance distance too, so it clips walls occasionally.
+  - `care = 0.5` (wave 2): checks for steel, avoids walls properly.
+  - `care = 1` (wave 3): checks steel, leads the player, and stays out of corners.
+- Replacement enemies do not spawn at fixed points (fixed points get camped).
 
-敌人补位点不固定（固定就会被守株待兔）。
+## 6. Waves and endings
 
-## 6. 波次与结局
-
-| 波 | 敌人 | `care` | 钢:砖 | 覆盖率 |
+| Wave | Enemies | `care` | steel:brick | Coverage |
 |---|---|---|---|---|
-| 1 | 1 | 0 | 1:3（砖多 = 逃生口多、开火安全） | 8%，**固定布局** |
-| 2 | 2 | 0.5 | 1:1 | 11%，随机 |
-| 3 | 3 | 1 | 3:1（钢多 = 跳弹危险、没有出路） | 14%，随机 |
+| 1 | 1 | 0 | 1:3 (brick-heavy = escape routes, safe to shoot) | 8%, **fixed layout** |
+| 2 | 2 | 0.5 | 1:1 | 11%, generated |
+| 3 | 3 | 1 | 3:1 (steel-heavy = ricochets, no way through) | 14%, generated |
 
-钢砖比例是这个设计独有的旋钮：它不是把数字调大，是**改变场地的性格**，而且随机生成让它免费。
+The steel:brick ratio is this design's own dial: it does not turn a number up, it
+**changes the arena's character** — and procedural generation gives it away free.
 
-三波清完 → `WON`。三条命用完 → `LOST`。两者都是明确的终局画面。
+Three waves cleared → `WON`. Three lives spent → `LOST`. Both are definite end screens.
 
-## 7. 自动化测试（spec 第 5 条前半）
+## 7. Automated tests (first half of spec line 5)
 
-`spec/game.test.ts`，和 `spec/invariants.test.ts` 并列（任何 `spec/*.test.ts` 都跟着 `pnpm check` 跑）。
+`spec/game.test.ts`, alongside `spec/invariants.test.ts` (any `spec/*.test.ts`
+runs with `pnpm check`).
 
-**头号测试：生成器不变量，跑 200 个种子的属性测试。** 断言 §3 那五条。
+**The headline test: the generator invariants, as a property test over 200 seeds.**
+Asserting the five in §3.
 
-选它的理由：随机生成把"能测的东西"从"手感"变成了"纯函数"，这是随机地图送的礼物。
-而且它守的是**公平性**——撞墙即死的游戏里，一张能把玩家困死的随机图是不可接受的 bug，
-这正是"一条游戏规则"的最好人选。
+Why that one: procedural generation moves the testable surface from "feel" to
+"pure function", which is a gift the random map hands you. And what it guards is
+**fairness** — in a game where walls kill, a generated map that can trap the
+player is an unacceptable bug. That makes it the best candidate for "a rule of
+the game".
 
-配套的小测试（纯函数，不碰 DOM）：
+Smaller tests alongside (pure functions, no DOM):
 
-- 子弹撞钢墙横边 → vy 翻转、vx 不变。
-- 子弹撞砖墙 → 砖被清除且子弹消失（不继续飞）。
-- 发射者自己进入子弹路径 → 判定死亡。
-- 死区：光标在半径 r 内时目标朝向不变。
+- Bullet hits a horizontal steel edge → vy flips, vx unchanged.
+- Bullet hits brick → the brick is cleared and the bullet is gone (does not fly on).
+- The shooter walks into its own bullet's path → it dies.
+- Dead zone: cursor within radius r leaves the target heading unchanged.
 
-**每个测试都要被证明有能力失败**（`CLAUDE.md` 的规则）：故意把生成器的死角封口逻辑拿掉，看它变红，再放回去。
-这一步的 commit 就是过程证据。
+**Every test must be shown capable of failing** (`CLAUDE.md`'s rule): pull the
+dead-end capping out of the generator, watch it go red, put it back. That commit
+is the process evidence.
 
-## 8. 模块划分
+## 8. Module split
 
-代码落在 `src/`，所以**第一件事是把 `src` 加进 `tsconfig.json` 的 `include`**——
-现在是 `["*.ts", "spec", "scripts"]`，`include` 是白名单，不加的话 `pnpm typecheck` 会一声不吭地跳过整个引擎
-（`CLAUDE.md` "Facts about this repo that bite" 第二条，A1 上已经付过一次学费）。
+Code lives in `src/`, so **the first thing to do is add `src` to `include` in
+`tsconfig.json`** — it is currently `["*.ts", "spec", "scripts"]`, `include` is a
+whitelist, and without it `pnpm typecheck` silently skips the entire engine
+(`CLAUDE.md`, "Facts about this repo that bite", second entry — A1 already paid
+for this lesson once).
 
-| 文件 | 职责 |
+| File | Job |
 |---|---|
-| `src/config.ts` | 所有可调参数，一个地方 |
-| `src/map.ts` | 网格、生成器、不变量检查 |
-| `src/sim.ts` | 坦克步进、子弹步进、反射、碰撞与死亡判定（纯，无 DOM） |
-| `src/ai.ts` | 敌人转向与开火决策，`care` 参数 |
-| `src/game.ts` | 状态机、波次、命数 |
-| `src/render.ts` | Canvas 绘制 |
-| `main.ts` | pointer 输入、rAF 主循环、装配 |
+| `src/config.ts` | Every tunable, in one place |
+| `src/map.ts` | Grid, generator, invariant checks |
+| `src/sim.ts` | Tank step, bullet step, reflection, collision and death (pure, no DOM) |
+| `src/ai.ts` | Enemy steering and firing decisions, the `care` parameter |
+| `src/game.ts` | State machine, waves, lives |
+| `src/render.ts` | Canvas drawing |
+| `main.ts` | Pointer input, rAF loop, assembly |
 
-`sim.ts` / `map.ts` 无 DOM 依赖是有意的——§7 的测试全部打在这两个文件上。
+`sim.ts` and `map.ts` having no DOM dependency is deliberate — every test in §7
+lands on those two files.
 
-## 9. 构建顺序与时间预算（剩 4.9 小时）
+## 9. Build order and time budget (4.9 hours left)
 
-| 时间 | 做什么 | 完成时看得见什么 |
+| Time | What | What is visible when it lands |
 |---|---|---|
-| 03:35–04:00 | tsconfig include、config、canvas、rAF、`READY` 态 | 一台跟着光标转的静止坦克 |
-| 04:00–04:30 | 移动、撞墙即死、地图渲染（先用固定图） | **第一个能玩的东西**：能开、会撞死 |
-| 04:30–05:00 | 子弹：发射、钢墙反弹、砖墙破坏、自杀判定 | 完整的射击规则 |
-| 05:00–05:30 | 生成器 + 不变量 + `spec/game.test.ts`（红 → 绿） | 测试从红转绿，过程证据 |
-| 05:30–06:10 | 敌人 AI + `care` | 一个能对打的游戏 |
-| 06:10–06:40 | 波次、命数、重生、输赢结局 | 一局完整的游戏 |
-| 06:40–07:10 | **玩它。** 两个 marking 视口（`pnpm shot`） | spec 第 5 条后半那处改动 |
-| 07:10–07:35 | 打磨：像素美术、`prefers-reduced-motion`、a11y、card.png、meta | 能看的东西 |
-| 07:35–08:00 | `PROCESS.md` + `reflections/crit-5.md` + 截图 | `pnpm check:evidence` 转绿 |
-| 08:00–08:25 | **ship**：翻公开、Pages、等 CI、验证部署 URL | 上线 |
+| 03:35–04:00 | tsconfig include, config, canvas, rAF, `READY` | A stationary tank tracking the cursor |
+| 04:00–04:30 | Movement, lethal walls, map rendering (fixed map first) | **The first playable thing**: it drives, it dies |
+| 04:30–05:00 | Bullets: firing, steel reflection, brick destruction, self-kill | The complete shooting rules |
+| 05:00–05:30 | Generator + invariants + `spec/game.test.ts` (red → green) | A test going red to green: process evidence |
+| 05:30–06:10 | Enemy AI + `care` | A game with an opponent |
+| 06:10–06:40 | Waves, lives, respawn, win/lose endings | One complete run |
+| 06:40–07:10 | **Play it.** Both marking viewports (`pnpm shot`) | The change for the second half of spec line 5 |
+| 07:10–07:35 | Polish: pixel art, `prefers-reduced-motion`, a11y, card.png, meta | Something worth looking at |
+| 07:35–08:00 | `PROCESS.md` + `reflections/crit-5.md` + screenshots | `pnpm check:evidence` goes green |
+| 08:00–08:25 | **ship**: flip public, Pages, wait for CI, verify the deployed URL | Live |
 
-**07:10 是内容冻结点。** 之后只有文档和上线。滑坡时砍打磨，不砍文档——
-`pnpm check:evidence` 是硬门（现在四条红：没有 reflection、`PROCESS.md` 还是模板注释、
-两个占位 commit hash 不存在），而且 **CI 在仓库私有期间一行都不跑**，
-第一次真跑就是 08:00 之后翻公开那一刻。那时候发现问题没有时间。
+**07:10 is the content freeze.** After it, documents and shipping only. If the
+schedule slips, cut polish, never documents — `pnpm check:evidence` is a hard
+gate (four red right now: no reflection, `PROCESS.md` still template comments,
+two placeholder commit hashes that do not exist), and **CI does not run a single
+line while the repo is private**. Its first real run is the moment it goes public
+after 08:00, and that is too late to find anything.
 
-## 10. 参数初值（都待玩了再调）
+## 10. Starting parameters (all of them wait for play)
 
-| 参数 | 初值 | 备注 |
+| Parameter | Start | Note |
 |---|---|---|
-| 格子 | 16 px | 逻辑画布 640×480，整数倍缩放 |
-| 坦克速度 v | 60 px/s | 3.75 格/s |
-| 最大角速度 ω | 2.0 rad/s | 转弯半径 r = 30 px ≈ 1.9 格，转弯直径 ≈ 3.8 格 |
-| 子弹速度 b | 200 px/s | 3.3 × 车速 |
-| 子弹寿命 | 3 次反弹 / 4 s | 不能永远在 |
-| 开火冷却 | 0.35 s | 防止连发灌满场地 |
-| 每台在飞子弹上限 | 3 | |
-| 车体半径 | 6 px | 碰撞用圆 |
-| 死区半径 | = r = 30 px | |
+| Tile | 16 px | 640×480 logical canvas, integer scaling |
+| Tank speed v | 60 px/s | 3.75 tiles/s |
+| Max angular velocity ω | 2.0 rad/s | turning radius r = 30 px ≈ 1.9 tiles, diameter ≈ 3.8 tiles |
+| Bullet speed b | 200 px/s | 3.3 × tank speed |
+| Bullet life | 3 bounces / 4 s | must not live forever |
+| Fire cooldown | 0.35 s | stops click-spam flooding the arena |
+| Bullets in flight per tank | 3 | |
+| Hull radius | 6 px | collision circle |
+| Dead zone radius | = r = 30 px | |
 
-**自杀危险距离**：朝正前方钢墙开火后，逃生时间 t = 2d/(b+v)，横向位移 ≈ v·ω·t²/2，**正比于 d²**。
-按上表算：d = 10 格时 t ≈ 1.2 s，随便躲；d = 3 格时横向只有半个车宽，危险；d = 2 格必死。
-所以"离钢墙 3 格以内别开火"是玩家要学的手感，而 d² 意味着这个阈值很陡——
-这正是**单发子弹限制**要修的东西：场上只有一发，你才看得见自己正处在哪一侧。
+**Suicide distance**: after firing at steel directly ahead, the time to escape is
+t = 2d/(b+v) and the lateral displacement is ≈ v·ω·t²/2, i.e. **proportional to
+d²**. On the table above: at d = 10 tiles, t ≈ 1.2 s, easy; at d = 3 tiles the
+lateral move is half a hull width, dangerous; at d = 2 tiles it is certain death.
+So "do not fire within 3 tiles of steel" is a feel the player has to learn, and
+the d² means the threshold is steep. This was the agent's argument for the
+single-bullet limit — with one bullet on the field you can see which side of the
+threshold you are on. It lost (see the 03:40 rulings), and the two mitigations
+there stand in for it.
 
-## 11. 只有玩了才知道的（spec 第 5 条后半）
+## 11. Things only playing it can tell you (second half of spec line 5)
 
-spec 明确要一处"来自玩成品而不是读代码"的改动。以下是候选，**现在不要提前裁决**：
+The spec explicitly wants one change that came from playing the finished thing
+rather than reading the code. Candidates, **not to be ruled on in advance**:
 
-- ω 到底多大才既有惯性又不憋屈。
-- 开火冷却 0.35 s 是太快(灌满场地)还是太慢(躲不过瘾)。
-- 敌人 `care = 0` 时自杀得够不够频繁——太少教不会，太多游戏自己打完了。
-- 撞墙即死配三条命，第一分钟到底是"学会了"还是"被劝退了"。
-- 死区半径取 r 是否偏大。
-- 第 3 波三个敌人同屏，死因还读得出来吗。
+- How large ω has to be to have inertia without feeling strangled.
+- Whether a 0.35 s cooldown is too fast (arena floods) or too slow (dodging is
+  not satisfying).
+- Whether `care = 0` kills itself often enough — too rarely and it teaches
+  nothing, too often and the game plays itself.
+- Whether lethal walls plus three lives reads as "learned it" or "put off" in the
+  first minute.
+- Whether a dead zone of r is too large.
+- Whether the cause of death is still legible with three enemies on screen in wave 3.
 
-改动落地时 commit message 要写明**是玩出来的，不是读出来的**，`PROCESS.md` 引用那个 commit。
+When the change lands, the commit message must say **it came from playing, not
+from reading**, and `PROCESS.md` cites that commit.
 
-### 实际玩出来的（三条，都不在上面的候选里）
+### What playing actually turned up (three, none of them on the list above)
 
-上面六条候选，玩下来一条都没成为要改的东西——参数在 headless 里跑 180 局就调完了，
-真上手玩暴露的全是**看得见但读代码看不见**的东西：
+Not one of the six candidates became a change. The parameters were settled by
+180 headless runs; what actually playing it exposed was entirely **things you can
+see and cannot read**:
 
-| commit | 玩出来的问题 |
+| Commit | What playing showed |
 | --- | --- |
-| `068183b` | 命数和波次是画在最顶排钢墙上的 6 px 小点，灰底灰点。玩的时候根本不知道自己还剩几条命。→ 画布加高到 512，HUD 独占 32 px 一条带子，命数和波次都画成坦克本身的形状。 |
-| `d72fe73` | 顶栏 ARENA / COLOPHON 两个链接，长得像能点，点了页面没有任何反应（整页本来就只有一屏）。→ 换成真会有反应的两个：Colophon 就地展开，Source 去仓库。 |
-| `079c4ef` | 准星（见第 4 节后记）。 |
+| `36fef06` | Lives and waves were 6 px pips painted on the top row of steel — grey on grey. Playing, you have no idea how many lives you have left. → Canvas raised to 512, the HUD gets its own 32 px band, and lives and waves are drawn as the shape of the thing they stand for: tanks. |
+| `59b7444` | The ARENA / COLOPHON links in the header looked clickable and did nothing visible (the page is one screen to begin with). → Two links that actually respond: Colophon opens in place, Source goes to the repo. |
+| `7be15f2` | The reticle (see the note in §4). |
 
-## 12. 风险
+## 12. Risks
 
-1. **三波共 6 次击杀，熟练玩家可能 2 分钟通关**，而 brief 要"五分钟还有意思"。
-   缓解：第 3 波要真的难；玩下来太短的话**加波次比加机制便宜**，第 4 波（4 敌、全钢场）是现成的。
-2. **第 1 波的敌人自杀演示不保证发生** → 固定布局，把钢墙摆在它的巡逻路径上。
-   如果玩了三次都没看到，就在第 1 波把 `care` 调成负的（主动朝最近的钢墙开火）。
-3. **触屏不可玩**，而 390 是 marking 视口之一。核心做完再补 TAP 阈值那套。
-4. **CI 只在翻公开后才跑。** 08:00 之前 `pnpm check` 和 `pnpm check:evidence` 必须本地全绿。
+1. **Three waves is six kills, and a good player might finish in 2 minutes**,
+   where the brief wants it still interesting at five. Mitigation: make wave 3
+   genuinely hard; if play says it is too short, **another wave is cheaper than
+   another mechanic** — wave 4 (4 enemies, all-steel arena) is already sitting
+   there.
+2. **The wave 1 suicide demonstration is not guaranteed to happen** → fixed
+   layout, with steel placed on its patrol line. If three playthroughs go by
+   without it, make wave 1's `care` negative (actively fire at the nearest steel).
+3. **Touch is unplayable**, and 390 is one of the marking viewports. Add the TAP
+   threshold after the core is done.
+4. **CI only runs once the repo is public.** Before 08:00, `pnpm check` and
+   `pnpm check:evidence` must be green locally.
