@@ -6,6 +6,12 @@ export const ROWS = 30;
 export const W = COLS * TILE; // 640
 export const H = ROWS * TILE; // 480
 
+// The HUD had been painted over the top row of steel: 6px tall, on a grey wall,
+// the same grey. It gets its own band above the arena instead, so the canvas is
+// taller than the playfield and the world is drawn offset by HUD_H.
+export const HUD_H = 32;
+export const CANVAS_H = H + HUD_H; // 512
+
 // The tank never stops and never reverses. Speed is constant; the only thing
 // the player controls is how fast it is allowed to turn.
 export const SPEED = 60; // px/s

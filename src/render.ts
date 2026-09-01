@@ -1,6 +1,6 @@
 // Everything that touches a canvas lives here.
 
-import { COLS, H, ROWS, TILE, W } from "./config.ts";
+import { COLS, H, HUD_H, LIVES, ROWS, TILE, W } from "./config.ts";
 import { at, BRICK, EMPTY, STEEL, type Grid } from "./map.ts";
 import type { Tank } from "./sim.ts";
 
@@ -98,15 +98,51 @@ export function drawBullet(g: CanvasRenderingContext2D, x: number, y: number, mi
   }
 }
 
-/** Lives left, as pips: state, not a caption. */
-export function drawLives(g: CanvasRenderingContext2D, n: number): void {
-  for (let i = 0; i < n; i++) {
-    const x = 8 + i * 10;
-    g.fillStyle = PLAYER.hull;
-    g.fillRect(x, 8, 6, 5);
-    g.fillStyle = PLAYER.tread;
-    g.fillRect(x, 7, 6, 1);
-    g.fillRect(x, 13, 6, 1);
+const HUD_BG = "#0d0f14";
+const HUD_RULE = "#232936";
+const SPENT = { hull: "#222834", tread: "#1b202a", barrel: "#2b3240" };
+const BEATEN = { hull: "#4a2b23", tread: "#341e18", barrel: "#573129" };
+const PENDING = { hull: "#242a35", tread: "#1c212b", barrel: "#2d3441" };
+
+type Skin = { hull: string; tread: string; barrel: string };
+
+/** One tank at icon scale, facing `dir`. Same shape as the thing it stands for. */
+function icon(g: CanvasRenderingContext2D, x: number, y: number, s: Skin, dir: number): void {
+  g.save();
+  g.translate(x, y);
+  g.scale(dir, 1);
+  g.fillStyle = s.tread;
+  g.fillRect(-8, -8, 15, 3);
+  g.fillRect(-8, 5, 15, 3);
+  g.fillStyle = s.hull;
+  g.fillRect(-7, -5, 13, 10);
+  g.fillStyle = s.barrel;
+  g.fillRect(2, -2, 10, 4);
+  g.fillStyle = s.tread;
+  g.fillRect(-3, -3, 6, 6);
+  g.restore();
+}
+
+/**
+ * The band. Left: one tank per life, spent ones left as empty silhouettes so
+ * three-of-three is readable without counting. Right: one enemy per wave,
+ * beaten / here / still coming, with a bar under the one you are in.
+ */
+export function drawHud(g: CanvasRenderingContext2D, lives: number, wave: number, waves: number): void {
+  g.fillStyle = HUD_BG;
+  g.fillRect(0, 0, W, HUD_H);
+  g.fillStyle = HUD_RULE;
+  g.fillRect(0, HUD_H - 1, W, 1);
+
+  for (let i = 0; i < LIVES; i++) icon(g, 18 + i * 26, 15, i < lives ? PLAYER : SPENT, 1);
+
+  for (let i = 0; i < waves; i++) {
+    const x = W - 18 - (waves - 1 - i) * 26;
+    icon(g, x, 15, i < wave - 1 ? BEATEN : i === wave - 1 ? ENEMY : PENDING, -1);
+    if (i === wave - 1) {
+      g.fillStyle = PLAYER.barrel;
+      g.fillRect(x - 10, HUD_H - 6, 20, 2);
+    }
   }
 }
 
@@ -121,15 +157,6 @@ export function drawBoom(g: CanvasRenderingContext2D, x: number, y: number, t: n
   g.arc(Math.round(x), Math.round(y), r, 0, Math.PI * 2);
   g.stroke();
   g.globalAlpha = 1;
-}
-
-/** Which wave, as pips. Filled ones are behind you. */
-export function drawWave(g: CanvasRenderingContext2D, wave: number, total: number): void {
-  for (let i = 0; i < total; i++) {
-    const x = W - 8 - (total - i) * 10;
-    g.fillStyle = i < wave ? ENEMY.hull : "#2a303c";
-    g.fillRect(x, 8, 6, 6);
-  }
 }
 
 /** The two endings. Words are allowed here; they are not telling you anything. */
