@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Throwaway page: renders public/card.png at exactly 1200x630. Not part of
+     the site — Vite only builds index.html, so this never reaches dist/.
+     Served by `pnpm dev` at /scripts/card.html and shot by card.ts. -->
+<meta charset="utf-8" />
+<title>card</title>
+<style>
+  html, body { margin: 0; background: #0b0c10; overflow: hidden; }
+  #card { position: relative; width: 1200px; height: 630px; overflow: hidden;
+          font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; }
+  #arena { position: absolute; right: -40px; top: 50%; translate: 0 -50%;
+           width: 700px; height: 525px; image-rendering: pixelated;
+           border: 1px solid #262d3a; }
+  #veil { position: absolute; inset: 0;
+          background: linear-gradient(100deg, #0b0c10 34%, rgba(11,12,16,0) 68%); }
+  #words { position: absolute; left: 72px; top: 50%; translate: 0 -50%; }
+  h1 { margin: 0; font-size: 76px; line-height: 1.05; letter-spacing: 0.1em;
+       color: #f2f4f8; font-weight: 600; }
+  p { margin: 26px 0 0; font-size: 20px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #6b7482; }
+</style>
+<div id="card">
+  <canvas id="arena" width="640" height="480"></canvas>
+  <div id="veil"></div>
+  <div id="words"><h1>NO<br />REVERSE</h1><p>COMP4020 &middot; Crit 5</p></div>
+</div>
+<script type="module">
+  import { WAVES } from "../src/config.ts";
+  import { newGame, press, step } from "../src/game.ts";
+  import { drawBullet, drawTank, paintMap } from "../src/render.ts";
+
+  const g = document.querySelector("#arena").getContext("2d");
+  g.imageSmoothingEnabled = false;
+
+  // Play the opening wave for a couple of seconds so the card shows the game
+  // in motion — bullets in flight — rather than a still start position.
+  const w = newGame();
+  w.cursor = { x: 470, y: 190 };
+  press(w);
+  for (let i = 0; i < 150; i++) {
+    w.cursor = { x: 470, y: 190 };
+    step(w, 1 / 60);
+    if (i % 30 === 0) press(w);
+  }
+
+  g.drawImage(paintMap(w.arena.grid), 0, 0);
+  for (const e of w.enemies) if (e.alive) drawTank(g, e);
+  if (w.player.alive) drawTank(g, w.player);
+  for (const b of w.bullets) drawBullet(g, b.x, b.y, b.owner.player);
+  void WAVES;
+  document.title = "card ready";
+</script>
