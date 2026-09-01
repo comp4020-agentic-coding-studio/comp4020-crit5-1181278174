@@ -1,7 +1,8 @@
 // The state machine and the world it owns. Still no DOM here -- main.ts does
 // the wiring, render.ts does the drawing.
 
-import { FIRE_COOLDOWN, LIVES, SPEED, TANK_R } from "./config.ts";
+import { FIRE_COOLDOWN, LIVES, SPEED, TANK_R, WAVES } from "./config.ts";
+import { aimAt, wantsToShoot } from "./ai.ts";
 import { centre, wave1, type Arena } from "./map.ts";
 import {
   advance,
@@ -51,7 +52,7 @@ export function newGame(): World {
     player,
     enemies: arena.enemies.map((s) => {
       const c = centre(s.cx, s.cy);
-      return tank(c.x, c.y, s.angle, false, 0);
+      return tank(c.x, c.y, s.angle, false, WAVES[0]!.care);
     }),
     bullets: [],
     booms: [],
@@ -79,7 +80,13 @@ export function step(w: World, dt: number): void {
     for (const t of tanks(w)) if (t.cooldown > 0) t.cooldown -= dt;
 
     advance(w.player, dt, SPEED);
-    for (const e of w.enemies) if (e.alive) advance(e, dt, SPEED);
+    for (const e of w.enemies) {
+      if (!e.alive) continue;
+      e.target = aimAt(w.arena.grid, e, w.player, SPEED);
+      steer(e, dt);
+      advance(e, dt, SPEED);
+      if (w.player.alive && wantsToShoot(w.arena.grid, e, w.player, Math.random())) shoot(w, e);
+    }
 
     for (const t of tanks(w)) if (tankHitsWall(w.arena.grid, t)) destroy(w, t);
 
