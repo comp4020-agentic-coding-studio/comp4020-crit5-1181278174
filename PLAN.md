@@ -269,6 +269,18 @@ The steel:brick ratio is this design's own dial: it does not turn a number up, i
 
 Three waves cleared → `WON`. Three lives spent → `LOST`. Both are definite end screens.
 
+*Postscript (`0d7b6a4`).* The first version of those screens was a word and a
+pulsing box, and it answered "did I win" without answering "how far did I get".
+The rebuilt one is **a band, the same shape the HUD is** — so the row of wave
+icons inside it is read with the vocabulary the top of the screen has been
+teaching for the whole run: beaten, still standing, never reached. A loss shows
+you the tank that is still on its feet. Restart is the cursor's own flag on a
+breathing plate, which keeps the invitation inside the game's vocabulary instead
+of captioning it. The band wipes open from a 2px line, and that wipe is the only
+motion on the screen that is not the simulation itself — which makes it the only
+thing `prefers-reduced-motion` has anything to say about, so under that
+preference the ending is simply already settled.
+
 ## 7. Automated tests (first half of spec line 5)
 
 `spec/game.test.ts`, alongside `spec/invariants.test.ts` (any `spec/*.test.ts`
