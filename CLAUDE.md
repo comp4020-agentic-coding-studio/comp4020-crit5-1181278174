@@ -154,6 +154,16 @@ errors in the starter's own `scripts/check-evidence.ts` (`toSorted` against an E
 five errors in a file that had shipped, under a check that had always been green. Here:
 `tsconfig.json` read directly, `src` absent.
 
+### `vitest` does not typecheck, so a stale import fails at runtime instead
+
+`pnpm check` runs `tsc --noEmit` over the whole repo and *then* vitest, but vitest itself
+transpiles without checking types. A spec file that imports a name it no longer uses is caught by
+the typecheck; one that uses a name it no longer *imports* is not caught there either — it dies
+inside the test as `TANK_R is not defined`, which reads as a broken assertion rather than a
+broken import. Measured 2026-09-02: removing `TANK_R` from the import list in `spec/game.test.ts`
+while line 140 still used it produced a red test, not a red typecheck. When a test fails on a
+name, check the import list before you go looking at the logic.
+
 ### Node runs `.ts` in strip-only mode — no parameter properties, no enums
 
 **What happened.** `scripts/smoke.ts` was written with `constructor(private readonly ws: WebSocket)`
