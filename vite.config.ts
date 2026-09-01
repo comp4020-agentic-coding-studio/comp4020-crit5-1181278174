@@ -26,4 +26,11 @@ export default defineConfig({
       input: htmlEntries(),
     },
   },
+  // The generator's property tests walk 200 seeds x 3 waves and take ~2.7s on
+  // this machine -- under vitest's 5s default, but not under it on a shared CI
+  // runner, where both timed out. Nothing about them hangs; they are simply
+  // large, and the default budget was never sized for them. Raising the ceiling
+  // leaves every assertion untouched, which is the difference between waiting
+  // longer for a slow guard and weakening one.
+  test: { testTimeout: 30_000 },
 });

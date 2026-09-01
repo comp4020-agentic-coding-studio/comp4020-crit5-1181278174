@@ -154,6 +154,25 @@ errors in the starter's own `scripts/check-evidence.ts` (`toSorted` against an E
 five errors in a file that had shipped, under a check that had always been green. Here:
 `tsconfig.json` read directly, `src` absent.
 
+### A test that passes locally can still time out on CI, and the first run is at ship time
+
+**What happened.** `pnpm check` was green on this machine for the whole week. The flip to public
+ran CI for the first time, and the two generator property tests failed on it — not on an
+assertion, on `Test timed out in 5000ms`. `deploy` is gated on `check`, so the site did not
+publish and the red was discovered with the repo already public.
+
+**What is actually true.** vitest's default `testTimeout` is 5000ms and this repo set none. The
+corridor and pocket guards walk 200 seeds x 3 waves and take **2719ms and 2130ms here** — inside
+the budget, with no margin. GitHub's shared runner is roughly half this machine's speed, which
+is all it takes. So local green is not a prediction of CI green for anything slower than about
+2s, and because CI is skipped while the repo is private (above), the first honest measurement
+lands at the least recoverable moment.
+
+**How it was measured.** `vitest run --reporter=verbose` for the local numbers; run
+`33552148479`, annotations `spec/game.test.ts#71` and `#90`. Fixed by setting
+`test: { testTimeout: 30_000 }` in `vite.config.ts` — the ceiling, not the assertions. Watch the
+wall-clock of a new property test, not just its colour.
+
 ### `vitest` does not typecheck, so a stale import fails at runtime instead
 
 `pnpm check` runs `tsc --noEmit` over the whole repo and *then* vitest, but vitest itself
