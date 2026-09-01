@@ -7,7 +7,6 @@ import {
   BULLET_R,
   BULLET_SPEED,
   DEAD_ZONE,
-  MAX_BULLETS,
   MUZZLE,
   TANK_R,
   TILE,
@@ -119,8 +118,8 @@ export function fire(t: Tank): Bullet {
   };
 }
 
-export function canFire(t: Tank, inFlight: number): boolean {
-  return t.alive && t.cooldown <= 0 && inFlight < MAX_BULLETS;
+export function canFire(t: Tank, inFlight: number, clip: number): boolean {
+  return t.alive && t.cooldown <= 0 && inFlight < clip;
 }
 
 /**

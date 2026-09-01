@@ -26,6 +26,15 @@ export const MUZZLE = TANK_R + BULLET_R + 1;
 export const FIRE_COOLDOWN = 0.35;
 export const MAX_BULLETS = 3; // in flight, per tank
 
+// The enemy's gun is on the `care` dial, and it is a slower gun than yours.
+// A wave-1 tank fires wide and reloads slowly; a wave-3 tank waits for the
+// line. Yours never changes -- the difficulty is theirs, not a nerf to you.
+export const ENEMY_RELOAD = (care: number) => 1.6 - 0.8 * care;
+export const ENEMY_CLIP = (care: number) => Math.round(1 + care);
+export const ENEMY_WINDOW = (care: number) => 0.06 + 0.35 * (1 - care);
+export const ENEMY_RANGE = 260; // px: it fights at a distance you can read
+export const ENEMY_STANDOFF = 110; // px: closer than this it breaks off
+
 export const LIVES = 3;
 
 export type Wave = {

@@ -1,7 +1,16 @@
 // The state machine and the world it owns. Still no DOM here -- main.ts does
 // the wiring, render.ts does the drawing.
 
-import { FIRE_COOLDOWN, LIVES, SPEED, TANK_R, WAVES } from "./config.ts";
+import {
+  ENEMY_CLIP,
+  ENEMY_RELOAD,
+  FIRE_COOLDOWN,
+  LIVES,
+  MAX_BULLETS,
+  SPEED,
+  TANK_R,
+  WAVES,
+} from "./config.ts";
 import { aimAt, wantsToShoot } from "./ai.ts";
 import { centre, generate, wave1, type Arena } from "./map.ts";
 import {
@@ -181,8 +190,9 @@ function tanks(w: World): Tank[] {
 
 function shoot(w: World, t: Tank): void {
   const mine = w.bullets.reduce((n, b) => n + (b.owner === t ? 1 : 0), 0);
-  if (!canFire(t, mine)) return;
-  t.cooldown = FIRE_COOLDOWN;
+  const clip = t.player ? MAX_BULLETS : ENEMY_CLIP(t.care);
+  if (!canFire(t, mine, clip)) return;
+  t.cooldown = t.player ? FIRE_COOLDOWN : ENEMY_RELOAD(t.care);
   w.bullets.push(fire(t));
 }
 
