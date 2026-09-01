@@ -1,9 +1,21 @@
 // The state machine and the world it owns. Still no DOM here -- main.ts does
 // the wiring, render.ts does the drawing.
 
-import { LIVES, SPEED } from "./config.ts";
+import { FIRE_COOLDOWN, LIVES, SPEED, TANK_R } from "./config.ts";
 import { centre, wave1, type Arena } from "./map.ts";
-import { advance, aim, steer, tank, tankHitsWall, type Tank } from "./sim.ts";
+import {
+  advance,
+  aim,
+  bulletHits,
+  canFire,
+  fire,
+  steer,
+  stepBullet,
+  tank,
+  tankHitsWall,
+  type Bullet,
+  type Tank,
+} from "./sim.ts";
 
 export type Phase = "READY" | "PLAYING" | "DEAD" | "WAVE_CLEAR" | "WON" | "LOST";
 
@@ -14,6 +26,7 @@ export type World = {
   arena: Arena;
   player: Tank;
   enemies: Tank[];
+  bullets: Bullet[];
   booms: Boom[];
   lives: number;
   wave: number;
@@ -40,6 +53,7 @@ export function newGame(): World {
       const c = centre(s.cx, s.cy);
       return tank(c.x, c.y, s.angle, false, 0);
     }),
+    bullets: [],
     booms: [],
     lives: LIVES,
     wave: 1,
@@ -62,8 +76,43 @@ export function step(w: World, dt: number): void {
   }
 
   if (w.phase === "PLAYING") {
+    for (const t of tanks(w)) if (t.cooldown > 0) t.cooldown -= dt;
+
     advance(w.player, dt, SPEED);
-    if (tankHitsWall(w.arena.grid, w.player)) destroy(w, w.player);
+    for (const e of w.enemies) if (e.alive) advance(e, dt, SPEED);
+
+    for (const t of tanks(w)) if (tankHitsWall(w.arena.grid, t)) destroy(w, t);
+
+    // Ramming kills both. Without it a tank that cannot stop and cannot
+    // reverse would have no answer to another one sitting in its path.
+    for (const e of w.enemies) {
+      if (!e.alive || !w.player.alive) continue;
+      const d = TANK_R * 2;
+      if ((e.x - w.player.x) ** 2 + (e.y - w.player.y) ** 2 < d * d) {
+        destroy(w, e);
+        destroy(w, w.player);
+      }
+    }
+
+    const live: Bullet[] = [];
+    for (const b of w.bullets) {
+      const fate = stepBullet(w.arena.grid, b, dt);
+      if (fate === "brick") {
+        w.mapDirty = true;
+        continue;
+      }
+      if (fate === "gone") continue;
+      let spent = false;
+      for (const t of tanks(w)) {
+        if (bulletHits(b, t)) {
+          destroy(w, t);
+          spent = true;
+          break;
+        }
+      }
+      if (!spent) live.push(b);
+    }
+    w.bullets = live;
     return;
   }
 
@@ -76,9 +125,21 @@ export function step(w: World, dt: number): void {
       // Respawn is the opening state again: same tile, same stillness, and
       // nothing moves until you click. There is no unfair frame.
       w.player = spawnPlayer(w.arena);
+      w.bullets = [];
       w.phase = "READY";
     }
   }
+}
+
+function tanks(w: World): Tank[] {
+  return [w.player, ...w.enemies].filter((t) => t.alive);
+}
+
+function shoot(w: World, t: Tank): void {
+  const mine = w.bullets.reduce((n, b) => n + (b.owner === t ? 1 : 0), 0);
+  if (!canFire(t, mine)) return;
+  t.cooldown = FIRE_COOLDOWN;
+  w.bullets.push(fire(t));
 }
 
 export function destroy(w: World, t: Tank): void {
@@ -92,8 +153,11 @@ export function destroy(w: World, t: Tank): void {
 }
 
 export function press(w: World): void {
+  // The same click that starts the game fires the first shot -- so the one
+  // input you tried is also the one that taught you what clicking does.
   if (w.phase === "READY") {
     w.phase = "PLAYING";
     w.clock = 0;
   }
+  if (w.phase === "PLAYING") shoot(w, w.player);
 }

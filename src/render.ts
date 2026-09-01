@@ -76,6 +76,28 @@ export function drawTank(g: CanvasRenderingContext2D, t: Tank): void {
   g.restore();
 }
 
+/**
+ * Yours is a pale square, theirs is a red diamond. With several in the air at
+ * once, "what killed me" has to be answerable at a glance.
+ */
+export function drawBullet(g: CanvasRenderingContext2D, x: number, y: number, mine: boolean): void {
+  const cx = Math.round(x);
+  const cy = Math.round(y);
+  if (mine) {
+    g.fillStyle = "#3a3527";
+    g.fillRect(cx - 3, cy - 3, 6, 6);
+    g.fillStyle = "#fff6d8";
+    g.fillRect(cx - 2, cy - 2, 4, 4);
+  } else {
+    g.fillStyle = "#3a1e18";
+    g.fillRect(cx - 1, cy - 4, 2, 8);
+    g.fillRect(cx - 4, cy - 1, 8, 2);
+    g.fillStyle = "#ff7a55";
+    g.fillRect(cx - 1, cy - 3, 2, 6);
+    g.fillRect(cx - 3, cy - 1, 6, 2);
+  }
+}
+
 /** Lives left, as pips: state, not a caption. */
 export function drawLives(g: CanvasRenderingContext2D, n: number): void {
   for (let i = 0; i < n; i++) {

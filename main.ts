@@ -1,6 +1,6 @@
 import { H, W } from "./src/config.ts";
 import { newGame, press, step } from "./src/game.ts";
-import { drawBoom, drawCursor, drawLives, drawTank, paintMap } from "./src/render.ts";
+import { drawBoom, drawBullet, drawCursor, drawLives, drawTank, paintMap } from "./src/render.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#arena")!;
 canvas.width = W;
@@ -44,6 +44,7 @@ function frame(now: number): void {
   g.drawImage(mapLayer, 0, 0);
   for (const e of world.enemies) if (e.alive) drawTank(g, e);
   if (world.player.alive) drawTank(g, world.player);
+  for (const b of world.bullets) drawBullet(g, b.x, b.y, b.owner.player);
   for (const b of world.booms) drawBoom(g, b.x, b.y, b.t, b.player);
   drawLives(g, world.lives);
   if (aiming) drawCursor(g, world.cursor.x, world.cursor.y);

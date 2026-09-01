@@ -1,8 +1,19 @@
 // Geometry and stepping. Pure: takes state and dt, returns nothing but
 // mutations of what it was handed. No canvas, no window, no timers.
 
-import { DEAD_ZONE, TANK_R, TILE, TURN_RATE } from "./config.ts";
-import { at, EMPTY, type Grid } from "./map.ts";
+import {
+  BULLET_BOUNCES,
+  BULLET_LIFE,
+  BULLET_R,
+  BULLET_SPEED,
+  DEAD_ZONE,
+  MAX_BULLETS,
+  MUZZLE,
+  TANK_R,
+  TILE,
+  TURN_RATE,
+} from "./config.ts";
+import { at, BRICK, EMPTY, put, type Grid } from "./map.ts";
 
 export type Tank = {
   x: number;
@@ -81,4 +92,87 @@ export function hitsWall(g: Grid, x: number, y: number, r: number): boolean {
 
 export function tankHitsWall(g: Grid, t: Tank): boolean {
   return hitsWall(g, t.x, t.y, TANK_R);
+}
+
+export type Bullet = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  owner: Tank;
+  bounces: number;
+  life: number;
+};
+
+/** What happened to a bullet during one step. */
+export type BulletFate = "fly" | "gone" | "brick";
+
+export function fire(t: Tank): Bullet {
+  return {
+    x: t.x + Math.cos(t.angle) * MUZZLE,
+    y: t.y + Math.sin(t.angle) * MUZZLE,
+    vx: Math.cos(t.angle) * BULLET_SPEED,
+    vy: Math.sin(t.angle) * BULLET_SPEED,
+    owner: t,
+    bounces: 0,
+    life: 0,
+  };
+}
+
+export function canFire(t: Tank, inFlight: number): boolean {
+  return t.alive && t.cooldown <= 0 && inFlight < MAX_BULLETS;
+}
+
+/**
+ * Move one bullet. Steel flips the component that ran into it -- which is why
+ * a shot down a steel corridor comes back for whoever fired it. Brick eats the
+ * bullet and is gone: one wall costs one shot.
+ */
+export function stepBullet(g: Grid, b: Bullet, dt: number): BulletFate {
+  b.life += dt;
+  if (b.life > BULLET_LIFE) return "gone";
+
+  const dist = Math.hypot(b.vx, b.vy) * dt;
+  const parts = Math.max(1, Math.ceil(dist / 4));
+  const h = dt / parts;
+
+  for (let i = 0; i < parts; i++) {
+    const nx = b.x + b.vx * h;
+    if (at(g, Math.floor(nx / TILE), Math.floor(b.y / TILE)) !== EMPTY) {
+      const cx = Math.floor(nx / TILE);
+      const cy = Math.floor(b.y / TILE);
+      if (at(g, cx, cy) === BRICK) {
+        put(g, cx, cy, EMPTY);
+        return "brick";
+      }
+      b.vx = -b.vx;
+      if (++b.bounces > BULLET_BOUNCES) return "gone";
+    } else {
+      b.x = nx;
+    }
+
+    const ny = b.y + b.vy * h;
+    if (at(g, Math.floor(b.x / TILE), Math.floor(ny / TILE)) !== EMPTY) {
+      const cx = Math.floor(b.x / TILE);
+      const cy = Math.floor(ny / TILE);
+      if (at(g, cx, cy) === BRICK) {
+        put(g, cx, cy, EMPTY);
+        return "brick";
+      }
+      b.vy = -b.vy;
+      if (++b.bounces > BULLET_BOUNCES) return "gone";
+    } else {
+      b.y = ny;
+    }
+  }
+  return "fly";
+}
+
+/** Bullets do not ask whose they are. That is the whole point of them. */
+export function bulletHits(b: Bullet, t: Tank): boolean {
+  if (!t.alive) return false;
+  const d = TANK_R + BULLET_R;
+  const dx = b.x - t.x;
+  const dy = b.y - t.y;
+  return dx * dx + dy * dy < d * d;
 }
