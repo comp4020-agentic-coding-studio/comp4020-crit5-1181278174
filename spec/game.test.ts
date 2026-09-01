@@ -14,6 +14,7 @@ import {
   WAVES,
 } from "../src/config.ts";
 import { at, blank, BRICK, EMPTY, generate, put, STEEL, type Grid } from "../src/map.ts";
+import { destroy, newGame, press, step } from "../src/game.ts";
 import { aim, bulletHits, stepBullet, tank, turnToward, type Bullet } from "../src/sim.ts";
 
 const SEEDS = 200;
@@ -153,5 +154,60 @@ describe("the rules the arena is made of", () => {
   it("caps how fast the hull can turn", () => {
     const step = TURN_RATE * (1 / 60);
     expect(Math.abs(turnToward(0, Math.PI, step))).toBeCloseTo(step);
+  });
+});
+
+// The spec asks for a game that can be lost and that a stranger can reach the
+// end of. Neither is a matter of taste, so neither is left to play-testing.
+describe("both endings are reachable", () => {
+  function run(w: ReturnType<typeof newGame>, seconds: number): void {
+    for (let i = 0; i < seconds * 60; i++) step(w, 1 / 60);
+  }
+
+  it("ends in ALL CLEAR after the last wave is cleared", () => {
+    const w = newGame();
+    for (let wave = 1; wave <= WAVES.length; wave++) {
+      expect(w.wave).toBe(wave);
+      press(w);
+      expect(w.phase).toBe("PLAYING");
+      for (const e of w.enemies) destroy(w, e);
+      run(w, 2); // the wave-clear beat, then the next wave is armed
+    }
+    expect(w.phase).toBe("WON");
+  });
+
+  it("ends in WRECKED once the third life is spent", () => {
+    const w = newGame();
+    for (let life = 3; life > 0; life--) {
+      expect(w.lives).toBe(life);
+      press(w);
+      destroy(w, w.player);
+      expect(w.phase).toBe("DEAD");
+      run(w, 1.5);
+    }
+    expect(w.phase).toBe("LOST");
+  });
+
+  it("does not hand back the wave you already cleared when you die", () => {
+    const w = newGame();
+    press(w);
+    for (const e of w.enemies) destroy(w, e);
+    run(w, 2);
+    expect(w.wave).toBe(2);
+    press(w);
+    destroy(w, w.player);
+    run(w, 1.5);
+    expect(w.wave).toBe(2);
+    expect(w.lives).toBe(2);
+  });
+
+  it("survives a long unattended run without throwing", () => {
+    const w = newGame();
+    press(w);
+    for (let i = 0; i < 60 * 90; i++) {
+      step(w, 1 / 60);
+      if (w.phase === "READY" || w.phase === "WON" || w.phase === "LOST") press(w);
+    }
+    expect(["READY", "PLAYING", "DEAD", "WAVE_CLEAR", "WON", "LOST"]).toContain(w.phase);
   });
 });

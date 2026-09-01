@@ -3,7 +3,7 @@
 
 import { FIRE_COOLDOWN, LIVES, SPEED, TANK_R, WAVES } from "./config.ts";
 import { aimAt, wantsToShoot } from "./ai.ts";
-import { centre, wave1, type Arena } from "./map.ts";
+import { centre, generate, wave1, type Arena } from "./map.ts";
 import {
   advance,
   aim,
@@ -37,31 +37,51 @@ export type World = {
 };
 
 const DEAD_PAUSE = 1.0;
+const CLEAR_PAUSE = 1.3;
 
 function spawnPlayer(a: Arena): Tank {
   const p = centre(a.player.cx, a.player.cy);
   return tank(p.x, p.y, a.player.angle, true);
 }
 
+/** Wave 1 is the hand-placed arena; after that every wave is a fresh draw. */
+function arenaFor(wave: number): Arena {
+  if (wave === 1) return wave1();
+  return generate(Math.floor(Math.random() * 0xffffffff), WAVES[wave - 1]!);
+}
+
+function armWave(w: World, wave: number): void {
+  const care = WAVES[wave - 1]!.care;
+  w.wave = wave;
+  w.arena = arenaFor(wave);
+  w.player = spawnPlayer(w.arena);
+  w.enemies = w.arena.enemies.map((s) => {
+    const c = centre(s.cx, s.cy);
+    return tank(c.x, c.y, s.angle, false, care);
+  });
+  w.bullets = [];
+  w.mapDirty = true;
+  w.phase = "READY";
+  w.clock = 0;
+}
+
 export function newGame(): World {
-  const arena = wave1();
-  const player = spawnPlayer(arena);
-  return {
+  const w: World = {
     phase: "READY",
-    arena,
-    player,
-    enemies: arena.enemies.map((s) => {
-      const c = centre(s.cx, s.cy);
-      return tank(c.x, c.y, s.angle, false, WAVES[0]!.care);
-    }),
+    arena: wave1(),
+    player: tank(0, 0, 0, true),
+    enemies: [],
     bullets: [],
     booms: [],
     lives: LIVES,
     wave: 1,
-    cursor: { x: player.x + 90, y: player.y },
+    cursor: { x: 0, y: 0 },
     mapDirty: true,
     clock: 0,
   };
+  armWave(w, 1);
+  w.cursor = { x: w.player.x + 90, y: w.player.y };
+  return w;
 }
 
 export function step(w: World, dt: number): void {
@@ -120,7 +140,21 @@ export function step(w: World, dt: number): void {
       if (!spent) live.push(b);
     }
     w.bullets = live;
+
+    if (w.phase === "PLAYING" && w.enemies.every((e) => !e.alive)) {
+      w.phase = "WAVE_CLEAR";
+      w.clock = 0;
+    }
     return;
+  }
+
+  if (w.phase === "WAVE_CLEAR" && w.clock >= CLEAR_PAUSE) {
+    if (w.wave >= WAVES.length) {
+      w.phase = "WON";
+      w.clock = 0;
+    } else {
+      armWave(w, w.wave + 1);
+    }
   }
 
   if (w.phase === "DEAD" && w.clock >= DEAD_PAUSE) {
@@ -131,9 +165,12 @@ export function step(w: World, dt: number): void {
     } else {
       // Respawn is the opening state again: same tile, same stillness, and
       // nothing moves until you click. There is no unfair frame.
+      // The wave does not reset with you: the bricks you broke stay broken
+      // and the enemies you killed stay dead. A life buys another attempt at
+      // what is left, not a rerun.
       w.player = spawnPlayer(w.arena);
       w.bullets = [];
-      w.phase = "READY";
+      w.phase = w.enemies.every((e) => !e.alive) ? "WAVE_CLEAR" : "READY";
     }
   }
 }
@@ -160,6 +197,12 @@ export function destroy(w: World, t: Tank): void {
 }
 
 export function press(w: World): void {
+  if (w.phase === "WON" || w.phase === "LOST") {
+    w.lives = LIVES;
+    w.booms = [];
+    armWave(w, 1);
+    return;
+  }
   // The same click that starts the game fires the first shot -- so the one
   // input you tried is also the one that taught you what clicking does.
   if (w.phase === "READY") {

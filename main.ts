@@ -1,6 +1,15 @@
-import { H, W } from "./src/config.ts";
+import { H, W, WAVES } from "./src/config.ts";
 import { newGame, press, step } from "./src/game.ts";
-import { drawBoom, drawBullet, drawCursor, drawLives, drawTank, paintMap } from "./src/render.ts";
+import {
+  drawBoom,
+  drawBullet,
+  drawCursor,
+  drawEnding,
+  drawLives,
+  drawTank,
+  drawWave,
+  paintMap,
+} from "./src/render.ts";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#arena")!;
 canvas.width = W;
@@ -47,6 +56,10 @@ function frame(now: number): void {
   for (const b of world.bullets) drawBullet(g, b.x, b.y, b.owner.player);
   for (const b of world.booms) drawBoom(g, b.x, b.y, b.t, b.player);
   drawLives(g, world.lives);
+  drawWave(g, world.wave, WAVES.length);
+  if (world.phase === "WON" || world.phase === "LOST") {
+    drawEnding(g, world.phase === "WON", world.clock);
+  }
   if (aiming) drawCursor(g, world.cursor.x, world.cursor.y);
 
   requestAnimationFrame(frame);

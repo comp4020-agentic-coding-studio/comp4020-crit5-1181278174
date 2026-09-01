@@ -123,6 +123,34 @@ export function drawBoom(g: CanvasRenderingContext2D, x: number, y: number, t: n
   g.globalAlpha = 1;
 }
 
+/** Which wave, as pips. Filled ones are behind you. */
+export function drawWave(g: CanvasRenderingContext2D, wave: number, total: number): void {
+  for (let i = 0; i < total; i++) {
+    const x = W - 8 - (total - i) * 10;
+    g.fillStyle = i < wave ? ENEMY.hull : "#2a303c";
+    g.fillRect(x, 8, 6, 6);
+  }
+}
+
+/** The two endings. Words are allowed here; they are not telling you anything. */
+export function drawEnding(g: CanvasRenderingContext2D, won: boolean, t: number): void {
+  g.fillStyle = "rgba(6, 7, 10, 0.78)";
+  g.fillRect(0, 0, W, H);
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillStyle = won ? PLAYER.hull : ENEMY.hull;
+  g.font = "bold 34px ui-monospace, SFMono-Regular, Menlo, monospace";
+  g.fillText(won ? "ALL CLEAR" : "WRECKED", W / 2, H / 2 - 10);
+  // a slow pulse where the next click belongs -- an invitation, not a caption
+  const a = 0.35 + 0.35 * Math.sin(t * 3);
+  g.globalAlpha = a;
+  g.strokeStyle = "#c9ced8";
+  g.lineWidth = 1;
+  g.strokeRect(W / 2 - 26, H / 2 + 30, 52, 52);
+  g.globalAlpha = 1;
+  drawCursor(g, W / 2, H / 2 + 56);
+}
+
 /** A crosshair, not an arrow: the pointer is aiming, not clicking widgets. */
 export function drawCursor(g: CanvasRenderingContext2D, x: number, y: number): void {
   const cx = Math.round(x);
