@@ -112,7 +112,7 @@ decoration even though the property is true, and it will keep being green on the
 mechanism goes. C5: the no-boxed-in-pocket check survived cutting `BLOCK_GAP` from 4 to 1,
 because the generator's rejection radius already forbade the shape; it only went red at 0. If
 the honest mutation leaves it green, the test is measuring something other than what you named
-it — rewrite it, don't weaken the mutation ([`bca3c93`], corridor-width measure).
+it — rewrite it, don't weaken the mutation (`e4056f5`, the corridor-width measure).
 
 **Corrections land in the harness, not in a retry.** Twice wrong → pick one: a rule here (with
 its reason and the failing commit), a check (test / lint assertion), or `git revert` with the
