@@ -31,15 +31,14 @@ const VIEWPORTS = [
   { name: "390", width: 390, height: 844 },
 ] as const;
 
-// A still cannot tap, and this instrument has no URL primes: every state worth
-// evidencing is one a hand reaches. So M0 shoots the opening screen only — the
-// state the spec actually names ("the opening screen invites the first sound").
-// A1's scene/step primes (?scene=maze&steps=6000 and friends) were carried in
-// with this script and produced six meaningless near-identical stills per
-// viewport before they were removed.
+// A still cannot play, and this game has no URL primes: every state worth
+// evidencing is one a hand reaches, and the two ending screens are a mouse and
+// ninety seconds away. So this shoots the opening arena only. Crit 5's card
+// image is the exception and has its own page (scripts/card.html), which drives
+// the simulation headlessly before it paints.
 const STATES = [{ suffix: "-intro", query: "" }] as const;
 
-/** A1 had a scroll-away intro to prime past; this page has none. */
+/** Carried forward from a page that had a scroll-away intro; this one does not. */
 function withoutIntro(state: { readonly suffix: string; readonly query: string }): string {
   return state.query;
 }
