@@ -90,11 +90,10 @@ of this plan disagrees with this section, this section wins.
 
 - **Stack: adopted.** Vanilla TS + Vite + Canvas 2D. It ships in the template,
   zero conversion.
-- **One bullet at a time: vetoed.** Director: "可以有多发子弹，但是子弹不能永远
-  在，这本来就是一个躲避弹幕的游戏，就一发子弹还要躲啥" — several bullets are
-  fine, but a bullet must not live forever; this is a game about dodging fire,
-  and with one bullet on the field there is nothing to dodge. That is right, the
-  agent withdrew it. **Several in the air, each with a life limit.** The cost is
+- **One bullet at a time: vetoed.** Several bullets are fine; a bullet must not
+  live forever. This is a game about dodging fire, and with one bullet on the
+  field there is nothing to dodge. **Several in the air, each with a life
+  limit.** The cost is
   that "who killed me" gets muddy again, mitigated two cheaper ways instead:
   **player bullets and enemy bullets must be distinguishable at a glance**
   (colour and shape — not an instruction), and every tank has a fire cooldown
@@ -104,7 +103,7 @@ of this plan disagrees with this section, this section wins.
   the cursor" and "click" are the same gesture. Reuse crit 4's TAP threshold
   (lift within 10 px / 250 ms = fire, otherwise it was a steering drag). After
   the core.
-- **Name**: 一往无前 (placeholder, replaceable). *Shipped as* **No Reverse**.
+- **Name**: No Reverse.
 
 ## 0. The goal
 
