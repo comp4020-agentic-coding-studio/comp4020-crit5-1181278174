@@ -106,6 +106,14 @@ printed, the diff, what you observed in the artefact, and **what you did not ver
 **A new test has to be proved capable of failing.** Break what it guards on purpose, watch it go
 red, put it back. A guard that cannot fail is decoration.
 
+**Mutate the knob the guard names, not merely something nearby.** A guard can sit green while
+the property it asserts is upheld by an entirely different mechanism upstream — then it is
+decoration even though the property is true, and it will keep being green on the day that
+mechanism goes. C5: the no-boxed-in-pocket check survived cutting `BLOCK_GAP` from 4 to 1,
+because the generator's rejection radius already forbade the shape; it only went red at 0. If
+the honest mutation leaves it green, the test is measuring something other than what you named
+it — rewrite it, don't weaken the mutation ([`bca3c93`], corridor-width measure).
+
 **Corrections land in the harness, not in a retry.** Twice wrong → pick one: a rule here (with
 its reason and the failing commit), a check (test / lint assertion), or `git revert` with the
 reason in the message.
