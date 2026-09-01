@@ -175,16 +175,37 @@ export function drawEnding(g: CanvasRenderingContext2D, won: boolean, t: number)
   g.lineWidth = 1;
   g.strokeRect(W / 2 - 26, H / 2 + 30, 52, 52);
   g.globalAlpha = 1;
-  drawCursor(g, W / 2, H / 2 + 56);
+  // Offset so the whole glyph sits centred in the box: the flag hangs up and
+  // to the right of the point it marks, the box does not.
+  drawCursor(g, W / 2 - 4, H / 2 + 62);
 }
 
-/** A crosshair, not an arrow: the pointer is aiming, not clicking widgets. */
+const POLE = "#d4dae6";
+const FLAG = "#ff3b30";
+const FLAG_SHADE = "#7d1a15";
+
+/**
+ * A flag planted where you are steering, not a crosshair: the tank takes a
+ * second and a wide arc to get there, so the target wants to look like a place
+ * rather than a shot. The base tick is the exact point; the banner leans away
+ * from the ceiling so it never rides up into the HUD.
+ */
 export function drawCursor(g: CanvasRenderingContext2D, x: number, y: number): void {
   const cx = Math.round(x);
   const cy = Math.round(y);
-  g.fillStyle = "#f6ecc2";
-  g.fillRect(cx - 5, cy, 4, 1);
-  g.fillRect(cx + 2, cy, 4, 1);
-  g.fillRect(cx, cy - 5, 1, 4);
-  g.fillRect(cx, cy + 2, 1, 4);
+  const d = cy > 15 ? -1 : 1;
+  const far = cy + 12 * d;
+  const top = d < 0 ? far : far - 6;
+
+  g.fillStyle = POLE;
+  g.fillRect(cx, Math.min(cy, far), 1, 13);
+  g.fillRect(cx - 2, cy, 5, 1);
+
+  for (let r = 0; r < 7; r++) {
+    const bite = 3 - Math.abs(r - 3);
+    g.fillStyle = FLAG_SHADE;
+    g.fillRect(cx + 1, top + r, 10 - bite, 1);
+    g.fillStyle = FLAG;
+    g.fillRect(cx + 1, top + r, 9 - bite, 1);
+  }
 }
