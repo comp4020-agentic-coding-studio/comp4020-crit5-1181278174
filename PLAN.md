@@ -196,7 +196,8 @@ READY ──click (and fire)──> PLAYING ──wall/bullet/ram──> DEAD �
    (you can turn around).
 4. **No empty tile is enclosed by steel on three sides** (a steel dead end is a
    place you die on entering, and cannot even shoot your way out of).
-5. Enemy spawns are ≥ 12 tiles from the player spawn.
+5. Enemy spawns sit in the corners the player does not have, farthest first, and
+   are ≥ 14 tiles from the player spawn.
 
 Invariant 4 is the "every dead end must be capped with brick" rule. Note that it
 is simultaneously a **fairness guarantee** and the director's original fantasy of
@@ -249,6 +250,10 @@ produces an approach–threaten–pass–re-approach rhythm.
     Short avoidance distance too, so it clips walls occasionally.
   - `care = 0.5` (wave 2): checks for steel, avoids walls properly.
   - `care = 1` (wave 3): checks steel, leads the player, and stays out of corners.
+- The dial also carries the gun: rounds allowed in the air go 1 / 2 / 3 by wave,
+  and the reload goes 1.6 / 1.1 / 0.6 s. Those two move together on purpose. A
+  bigger clip alone changed nothing measurable, because what gates a careful
+  tank's gun is its aim window, not its magazine.
 - Replacement enemies do not spawn at fixed points (fixed points get camped).
 
 ## 6. Waves and endings
@@ -338,18 +343,21 @@ after 08:00, and that is too late to find anything.
 |---|---|---|
 | Tile | 16 px | 640×480 logical canvas, integer scaling |
 | Tank speed v | 60 px/s | 3.75 tiles/s |
-| Max angular velocity ω | 2.0 rad/s | turning radius r = 30 px ≈ 1.9 tiles, diameter ≈ 3.8 tiles |
-| Bullet speed b | 200 px/s | 3.3 × tank speed |
+| Max angular velocity ω | 2.5 rad/s | turning radius r = 24 px = 1.5 tiles, diameter 3 tiles |
+| Bullet speed b | 170 px/s | 2.8 × tank speed |
 | Bullet life | 3 bounces / 4 s | must not live forever |
 | Fire cooldown | 0.35 s | stops click-spam flooding the arena |
-| Bullets in flight per tank | 3 | |
+| Bullets in flight per player tank | 3 | |
+| Bullets in flight per enemy | 1 / 2 / 3 by wave | one round in wave 1 is legible; three is a sky |
+| Enemy reload | 1.6 / 1.1 / 0.6 s by wave | the clip only binds once the reload lets it |
 | Hull radius | 6 px | collision circle |
-| Dead zone radius | = r = 30 px | |
+| Dead zone radius | = r = 24 px | |
 
 **Suicide distance**: after firing at steel directly ahead, the time to escape is
 t = 2d/(b+v) and the lateral displacement is ≈ v·ω·t²/2, i.e. **proportional to
-d²**. On the table above: at d = 10 tiles, t ≈ 1.2 s, easy; at d = 3 tiles the
-lateral move is half a hull width, dangerous; at d = 2 tiles it is certain death.
+d²**. On the table above: at d = 10 tiles, t ≈ 1.4 s and 145 px of lateral, easy; at
+d = 3 tiles it is 13 px, about one hull width, dangerous; at d = 2 tiles it is
+6 px and certain death.
 So "do not fire within 3 tiles of steel" is a feel the player has to learn, and
 the d² means the threshold is steep. This was the agent's argument for the
 single-bullet limit — with one bullet on the field you can see which side of the
