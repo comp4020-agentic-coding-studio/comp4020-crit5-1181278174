@@ -1,7 +1,17 @@
 // The arena grid. Pure data + pure functions -- no canvas, no window, so the
 // generator's invariants can be tested headlessly.
 
-import { COLS, ROWS, TILE } from "./config.ts";
+import {
+  BLOCK_GAP,
+  COLS,
+  ENEMY_MIN_DIST,
+  ROWS,
+  RUNWAY,
+  SPAWN,
+  SPAWN_CLEAR,
+  TILE,
+  type Wave,
+} from "./config.ts";
 
 export const EMPTY = 0;
 export const BRICK = 1;
@@ -79,7 +89,93 @@ export function wave1(): Arena {
 
   return {
     grid: g,
-    player: { cx: 6, cy: 24, angle: 0 },
+    player: { ...SPAWN },
     enemies: [{ cx: 32, cy: 5, angle: Math.PI * 0.75 }],
   };
+}
+
+// --- generation ------------------------------------------------------------
+
+/** Deterministic per-seed: the same seed is the same arena, so a bad one is reportable. */
+export function rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function clearAround(g: Grid, cx: number, cy: number, pad: number): boolean {
+  for (let y = cy - pad; y <= cy + pad; y++)
+    for (let x = cx - pad; x <= cx + pad; x++) if (at(g, x, y) !== EMPTY) return false;
+  return true;
+}
+
+/**
+ * Obstacles are separated rectangles, never a maze. Two reasons, and they are
+ * the same reason: a tank that cannot stop needs a turning circle's worth of
+ * room, and a gap narrower than that is not a corridor, it is a sentence.
+ */
+export function generate(seed: number, w: Wave): Arena {
+  const r = rng(seed);
+  const g = blank();
+  border(g);
+
+  const spawnPad = Math.ceil(SPAWN_CLEAR / TILE);
+  const budget = Math.round((COLS - 2) * (ROWS - 2) * w.coverage);
+  let placed = 0;
+
+  for (let tries = 0; tries < 600 && placed < budget; tries++) {
+    const bw = 2 + Math.floor(r() * 3);
+    const bh = 2 + Math.floor(r() * 3);
+    const x = 1 + Math.floor(r() * (COLS - 2 - bw));
+    const y = 1 + Math.floor(r() * (ROWS - 2 - bh));
+
+    // keep BLOCK_GAP clear on every side, which also keeps every block off the
+    // border ring -- so no empty tile is ever boxed in on three sides
+    let ok = true;
+    for (let yy = y - BLOCK_GAP; yy < y + bh + BLOCK_GAP && ok; yy++)
+      for (let xx = x - BLOCK_GAP; xx < x + bw + BLOCK_GAP && ok; xx++)
+        if (xx > 0 && yy > 0 && xx < COLS - 1 && yy < ROWS - 1 && at(g, xx, yy) !== EMPTY) ok = false;
+    if (!ok) continue;
+    if (x - BLOCK_GAP < 1 || y - BLOCK_GAP < 1) continue;
+    if (x + bw + BLOCK_GAP > COLS - 1 || y + bh + BLOCK_GAP > ROWS - 1) continue;
+
+    // never inside the spawn's turning room, never across its runway
+    if (
+      x - spawnPad <= SPAWN.cx &&
+      SPAWN.cx <= x + bw + spawnPad &&
+      y - spawnPad <= SPAWN.cy &&
+      SPAWN.cy <= y + bh + spawnPad
+    )
+      continue;
+    if (y <= SPAWN.cy && SPAWN.cy < y + bh && x > SPAWN.cx && x <= SPAWN.cx + RUNWAY) continue;
+
+    fill(g, x, y, bw, bh, r() < w.steelShare ? STEEL : BRICK);
+    placed += bw * bh;
+  }
+
+  // Enumerate every legal enemy tile and draw from that, rather than throwing
+  // darts: rejection sampling quietly returned a wave with no enemies at all
+  // on some seeds, and a wave you cannot clear never ends.
+  const enemies: Spawn[] = [];
+  for (let pad = spawnPad; pad >= 1 && enemies.length < w.enemies; pad--) {
+    const open: Spawn[] = [];
+    for (let cy = 2; cy < ROWS - 2; cy++) {
+      for (let cx = 2; cx < COLS - 2; cx++) {
+        if (Math.hypot(cx - SPAWN.cx, cy - SPAWN.cy) < ENEMY_MIN_DIST) continue;
+        if (!clearAround(g, cx, cy, pad)) continue;
+        open.push({ cx, cy, angle: Math.atan2(SPAWN.cy - cy, SPAWN.cx - cx) });
+      }
+    }
+    while (open.length && enemies.length < w.enemies) {
+      const pick = open.splice(Math.floor(r() * open.length), 1)[0]!;
+      if (enemies.some((e) => Math.hypot(e.cx - pick.cx, e.cy - pick.cy) < 6)) continue;
+      enemies.push(pick);
+    }
+  }
+
+  return { grid: g, player: { ...SPAWN }, enemies };
 }

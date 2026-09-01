@@ -27,3 +27,23 @@ export const FIRE_COOLDOWN = 0.35;
 export const MAX_BULLETS = 3; // in flight, per tank
 
 export const LIVES = 3;
+
+export type Wave = {
+  enemies: number;
+  care: number; // how carefully the enemy checks what is in front of its gun
+  steelShare: number; // of the obstacle tiles placed, how many are steel
+  coverage: number; // share of the interior taken by obstacles
+};
+
+export const WAVES: Wave[] = [
+  { enemies: 1, care: 0, steelShare: 0.25, coverage: 0.08 },
+  { enemies: 2, care: 0.5, steelShare: 0.5, coverage: 0.11 },
+  { enemies: 3, care: 1, steelShare: 0.75, coverage: 0.14 },
+];
+
+/** Fixed for every wave and every respawn: you always start from the same tile. */
+export const SPAWN = { cx: 6, cy: 24, angle: 0 };
+export const RUNWAY = 8; // clear tiles that must lie ahead of the spawn
+export const SPAWN_CLEAR = 2 * TURN_RADIUS; // px: room for one full turn
+export const ENEMY_MIN_DIST = 12; // tiles from the player spawn
+export const BLOCK_GAP = 4; // tiles between obstacles: no corridor narrower than a U-turn
