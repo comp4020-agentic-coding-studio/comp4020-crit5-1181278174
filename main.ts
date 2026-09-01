@@ -55,6 +55,13 @@ document.querySelector<HTMLAnchorElement>('nav a[href="#colophon"]')!.addEventLi
 );
 if (location.hash === "#colophon") colophon.open = true;
 
+// The ending wipes open and breathes. Everything else on screen is the
+// simulation itself, which is the content, not decoration -- so this is the one
+// thing the preference has anything to say about.
+const stillness = matchMedia("(prefers-reduced-motion: reduce)");
+let motionOK = !stillness.matches;
+stillness.addEventListener("change", () => (motionOK = !stillness.matches));
+
 let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -75,7 +82,7 @@ function frame(now: number): void {
   for (const b of world.bullets) drawBullet(g, b.x, b.y, b.owner.player);
   for (const b of world.booms) drawBoom(g, b.x, b.y, b.t, b.player);
   if (world.phase === "WON" || world.phase === "LOST") {
-    drawEnding(g, world.phase === "WON", world.clock);
+    drawEnding(g, world.phase === "WON", world.clock, world.wave, WAVES.length, motionOK);
   }
   if (aiming) drawCursor(g, world.cursor.x, world.cursor.y);
   g.restore();
