@@ -1,6 +1,6 @@
 // Everything that touches a canvas lives here.
 
-import { COLS, H, ROWS, TANK_R, TILE, W } from "./config.ts";
+import { COLS, H, ROWS, TILE, W } from "./config.ts";
 import { at, BRICK, EMPTY, STEEL, type Grid } from "./map.ts";
 import type { Tank } from "./sim.ts";
 
@@ -76,6 +76,31 @@ export function drawTank(g: CanvasRenderingContext2D, t: Tank): void {
   g.restore();
 }
 
+/** Lives left, as pips: state, not a caption. */
+export function drawLives(g: CanvasRenderingContext2D, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const x = 8 + i * 10;
+    g.fillStyle = PLAYER.hull;
+    g.fillRect(x, 8, 6, 5);
+    g.fillStyle = PLAYER.tread;
+    g.fillRect(x, 7, 6, 1);
+    g.fillRect(x, 13, 6, 1);
+  }
+}
+
+/** The moment of a kill, so a death is something you saw rather than inferred. */
+export function drawBoom(g: CanvasRenderingContext2D, x: number, y: number, t: number, player: boolean): void {
+  const r = 3 + t * 46;
+  const a = Math.max(0, 1 - t / 0.7);
+  g.strokeStyle = player ? PLAYER.barrel : ENEMY.barrel;
+  g.globalAlpha = a;
+  g.lineWidth = 2;
+  g.beginPath();
+  g.arc(Math.round(x), Math.round(y), r, 0, Math.PI * 2);
+  g.stroke();
+  g.globalAlpha = 1;
+}
+
 /** A crosshair, not an arrow: the pointer is aiming, not clicking widgets. */
 export function drawCursor(g: CanvasRenderingContext2D, x: number, y: number): void {
   const cx = Math.round(x);
@@ -86,5 +111,3 @@ export function drawCursor(g: CanvasRenderingContext2D, x: number, y: number): v
   g.fillRect(cx, cy - 5, 1, 4);
   g.fillRect(cx, cy + 2, 1, 4);
 }
-
-export { TANK_R };

@@ -39,13 +39,6 @@ h1 {
   letter-spacing: 0.18em;
 }
 
-h1 b {
-  color: var(--dim);
-  font-weight: 400;
-  letter-spacing: 0.24em;
-  font-size: 0.75rem;
-}
-
 nav {
   display: flex;
   gap: 1rem;

@@ -74,7 +74,7 @@ export function wave1(): Arena {
   fill(g, 24, 4, 3, 2, BRICK);
   fill(g, 5, 17, 4, 2, BRICK);
   fill(g, 31, 22, 4, 2, BRICK);
-  fill(g, 13, 24, 3, 2, BRICK);
+  fill(g, 14, 26, 3, 2, BRICK);
   fill(g, 34, 11, 2, 3, BRICK);
 
   return {

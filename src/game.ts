@@ -7,11 +7,14 @@ import { advance, aim, steer, tank, tankHitsWall, type Tank } from "./sim.ts";
 
 export type Phase = "READY" | "PLAYING" | "DEAD" | "WAVE_CLEAR" | "WON" | "LOST";
 
+export type Boom = { x: number; y: number; t: number; player: boolean };
+
 export type World = {
   phase: Phase;
   arena: Arena;
   player: Tank;
   enemies: Tank[];
+  booms: Boom[];
   lives: number;
   wave: number;
   cursor: { x: number; y: number };
@@ -19,28 +22,28 @@ export type World = {
   clock: number; // seconds spent in the current phase
 };
 
-function place(a: Arena): { player: Tank; enemies: Tank[] } {
+const DEAD_PAUSE = 1.0;
+
+function spawnPlayer(a: Arena): Tank {
   const p = centre(a.player.cx, a.player.cy);
-  return {
-    player: tank(p.x, p.y, a.player.angle, true),
-    enemies: a.enemies.map((s) => {
-      const c = centre(s.cx, s.cy);
-      return tank(c.x, c.y, s.angle, false, 0);
-    }),
-  };
+  return tank(p.x, p.y, a.player.angle, true);
 }
 
 export function newGame(): World {
   const arena = wave1();
-  const { player, enemies } = place(arena);
+  const player = spawnPlayer(arena);
   return {
     phase: "READY",
     arena,
     player,
-    enemies,
+    enemies: arena.enemies.map((s) => {
+      const c = centre(s.cx, s.cy);
+      return tank(c.x, c.y, s.angle, false, 0);
+    }),
+    booms: [],
     lives: LIVES,
     wave: 1,
-    cursor: { x: player.x + 100, y: player.y },
+    cursor: { x: player.x + 90, y: player.y },
     mapDirty: true,
     clock: 0,
   };
@@ -48,23 +51,44 @@ export function newGame(): World {
 
 export function step(w: World, dt: number): void {
   w.clock += dt;
+  for (const b of w.booms) b.t += dt;
+  if (w.booms.length) w.booms = w.booms.filter((b) => b.t < 0.7);
 
-  // In READY the arena is frozen -- but the hull still answers the cursor, so
-  // the one thing you can do before the game starts is the one thing the game
-  // is made of.
-  w.player.target = aim(w.player, w.cursor.x, w.cursor.y);
-  steer(w.player, dt);
+  if (w.phase === "READY" || w.phase === "PLAYING") {
+    // Even frozen, the hull answers the cursor: the one thing you can do
+    // before the game starts is the one thing the game is made of.
+    w.player.target = aim(w.player, w.cursor.x, w.cursor.y);
+    steer(w.player, dt);
+  }
 
-  if (w.phase !== "PLAYING") return;
+  if (w.phase === "PLAYING") {
+    advance(w.player, dt, SPEED);
+    if (tankHitsWall(w.arena.grid, w.player)) destroy(w, w.player);
+    return;
+  }
 
-  advance(w.player, dt, SPEED);
-  if (tankHitsWall(w.arena.grid, w.player)) kill(w);
+  if (w.phase === "DEAD" && w.clock >= DEAD_PAUSE) {
+    w.lives -= 1;
+    w.clock = 0;
+    if (w.lives <= 0) {
+      w.phase = "LOST";
+    } else {
+      // Respawn is the opening state again: same tile, same stillness, and
+      // nothing moves until you click. There is no unfair frame.
+      w.player = spawnPlayer(w.arena);
+      w.phase = "READY";
+    }
+  }
 }
 
-function kill(w: World): void {
-  w.player.alive = false;
-  w.phase = "DEAD";
-  w.clock = 0;
+export function destroy(w: World, t: Tank): void {
+  if (!t.alive) return;
+  t.alive = false;
+  w.booms.push({ x: t.x, y: t.y, t: 0, player: t.player });
+  if (t.player) {
+    w.phase = "DEAD";
+    w.clock = 0;
+  }
 }
 
 export function press(w: World): void {
