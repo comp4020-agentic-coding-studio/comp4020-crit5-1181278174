@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BULLET_R,
   COLS,
+  ENEMY_CORNERS,
   ENEMY_MIN_DIST,
   ROWS,
   RUNWAY,
@@ -109,6 +110,14 @@ describe("every generated arena is survivable", () => {
       for (const e of a.enemies) {
         expect(solid(a.grid, e.cx, e.cy), `seed ${seed} enemy tile`).toBe(false);
         expect(Math.hypot(e.cx - SPAWN.cx, e.cy - SPAWN.cy)).toBeGreaterThanOrEqual(ENEMY_MIN_DIST);
+        // Corner-anchored, so the guarantee is much stronger than the floor:
+        // the nearest of the three anchors is 19 tiles out, and the search only
+        // gives ground when that corner is built over. Measured worst over 200
+        // seeds x 3 waves: 5 tiles, on seed 33.
+        expect(
+          Math.min(...ENEMY_CORNERS.map((c) => Math.hypot(e.cx - c.cx, e.cy - c.cy))),
+          `seed ${seed} enemy is not near any corner`,
+        ).toBeLessThanOrEqual(5);
       }
     }
   });

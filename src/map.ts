@@ -4,6 +4,7 @@
 import {
   BLOCK_GAP,
   COLS,
+  ENEMY_CORNERS,
   ENEMY_MIN_DIST,
   ROWS,
   RUNWAY,
@@ -96,6 +97,44 @@ export function wave1(): Arena {
 
 // --- generation ------------------------------------------------------------
 
+/**
+ * The open tile closest to `anchor` that an enemy can start on: clear for `pad`
+ * tiles around, far enough from the player, and not on top of another enemy.
+ * The padding relaxes rather than giving up, because a wave short an enemy is a
+ * wave that never ends.
+ */
+function nearestOpen(
+  g: Grid,
+  anchor: { cx: number; cy: number },
+  taken: readonly Spawn[],
+): Spawn | undefined {
+  // Two tiles of clearance, not the player's three. The player is stationary in
+  // READY and has to be able to turn around on the spot; an enemy is already
+  // moving at the player the frame it appears. Asking for the player's room
+  // here inverted the priority -- the search would satisfy a 7x7 block eleven
+  // tiles from the corner rather than take a 5x5 block right in it.
+  for (let pad = 2; pad >= 1; pad--) {
+    let best: { cx: number; cy: number } | undefined;
+    let bestD = Infinity;
+    for (let cy = 2; cy < ROWS - 2; cy++) {
+      for (let cx = 2; cx < COLS - 2; cx++) {
+        if (Math.hypot(cx - SPAWN.cx, cy - SPAWN.cy) < ENEMY_MIN_DIST) continue;
+        if (taken.some((e) => Math.hypot(e.cx - cx, e.cy - cy) < 6)) continue;
+        if (!clearAround(g, cx, cy, pad)) continue;
+        const d = Math.hypot(cx - anchor.cx, cy - anchor.cy);
+        if (d < bestD) {
+          bestD = d;
+          best = { cx, cy };
+        }
+      }
+    }
+    if (best) {
+      return { ...best, angle: Math.atan2(SPAWN.cy - best.cy, SPAWN.cx - best.cx) };
+    }
+  }
+  return undefined;
+}
+
 /** Deterministic per-seed: the same seed is the same arena, so a bad one is reportable. */
 export function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -157,24 +196,16 @@ export function generate(seed: number, w: Wave): Arena {
     placed += bw * bh;
   }
 
-  // Enumerate every legal enemy tile and draw from that, rather than throwing
-  // darts: rejection sampling quietly returned a wave with no enemies at all
-  // on some seeds, and a wave you cannot clear never ends.
+  // Enemies take the corners the player does not have, farthest first. This
+  // used to sample the whole floor for any tile >= ENEMY_MIN_DIST away, which
+  // is a weak guarantee: 12 tiles is inside one approach, so a wave could open
+  // with an enemy already on you. Anchoring to corners makes every wave start
+  // as a long diagonal you can watch coming, and it costs the generator nothing
+  // -- it is a search for the nearest legal tile to a fixed point, not a dart.
   const enemies: Spawn[] = [];
-  for (let pad = spawnPad; pad >= 1 && enemies.length < w.enemies; pad--) {
-    const open: Spawn[] = [];
-    for (let cy = 2; cy < ROWS - 2; cy++) {
-      for (let cx = 2; cx < COLS - 2; cx++) {
-        if (Math.hypot(cx - SPAWN.cx, cy - SPAWN.cy) < ENEMY_MIN_DIST) continue;
-        if (!clearAround(g, cx, cy, pad)) continue;
-        open.push({ cx, cy, angle: Math.atan2(SPAWN.cy - cy, SPAWN.cx - cx) });
-      }
-    }
-    while (open.length && enemies.length < w.enemies) {
-      const pick = open.splice(Math.floor(r() * open.length), 1)[0]!;
-      if (enemies.some((e) => Math.hypot(e.cx - pick.cx, e.cy - pick.cy) < 6)) continue;
-      enemies.push(pick);
-    }
+  for (const anchor of ENEMY_CORNERS.slice(0, w.enemies)) {
+    const spot = nearestOpen(g, anchor, enemies);
+    if (spot) enemies.push(spot);
   }
 
   return { grid: g, player: { ...SPAWN }, enemies };
